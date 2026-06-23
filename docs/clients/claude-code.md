@@ -1,12 +1,13 @@
 # Claude Code
 
-Add the server from your terminal, using the full path to your built `dist/index.js`:
+Add the server from your terminal. `npx` downloads and runs it on demand, so there's
+nothing to install first:
 
 ```bash
 claude mcp add kip \
   -e SIGNALK_HOST=your-boat \
   -e SIGNALK_PORT=3000 \
-  -- node /Users/you/kip-mcp-server/dist/index.js
+  -- npx -y kip-mcp-server
 ```
 
 Then start `claude` and ask: *"Look at my boat's data and suggest some KIP dashboards."*

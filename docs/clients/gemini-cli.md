@@ -1,14 +1,14 @@
 # Gemini CLI
 
-Edit `~/.gemini/settings.json` and add a `kip` server, using the full path to your built
-`dist/index.js`:
+Edit `~/.gemini/settings.json` and add a `kip` server. `npx` downloads and runs it on
+demand, so there's nothing to install first:
 
 ```json
 {
   "mcpServers": {
     "kip": {
-      "command": "node",
-      "args": ["/Users/you/kip-mcp-server/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "kip-mcp-server"],
       "env": {
         "SIGNALK_HOST": "your-boat",
         "SIGNALK_PORT": "3000"

@@ -2,14 +2,15 @@
 
 1. Open Claude Desktop's settings and edit the MCP config file
    (`claude_desktop_config.json`).
-2. Add a `kip` server, using the full path to your built `dist/index.js`:
+2. Add a `kip` server. `npx` downloads and runs it on demand, so there's nothing to install
+   first:
 
    ```json
    {
      "mcpServers": {
        "kip": {
-         "command": "node",
-         "args": ["/Users/you/kip-mcp-server/dist/index.js"],
+         "command": "npx",
+         "args": ["-y", "kip-mcp-server"],
          "env": {
            "SIGNALK_HOST": "your-boat",
            "SIGNALK_PORT": "3000"

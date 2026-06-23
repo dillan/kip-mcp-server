@@ -1,20 +1,15 @@
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import {
-  CallToolRequestSchema,
-  ListResourcesRequestSchema,
-  ListToolsRequestSchema,
-  ReadResourceRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
-import { callComposeTool, COMPOSE_TOOL_DEFINITIONS, COMPOSE_TOOL_NAMES } from './compose-tools.js';
+import { callComposeTool, COMPOSE_TOOL_SPECS } from './compose-tools.js';
 import { loadConfig } from './config.js';
-import { callDiscoveryTool, DISCOVERY_TOOL_DEFINITIONS, DISCOVERY_TOOL_NAMES } from './discovery-tools.js';
+import { callDiscoveryTool, DISCOVERY_TOOL_SPECS } from './discovery-tools.js';
 import { SkClient } from './discovery/sk-client.js';
 import { readResourceText } from './resources.js';
 import { loadKipSchema } from './schema/kip-schema.js';
 import type { KipDashboardSchema } from './schema/schema-types.js';
-import { callTool, TOOL_DEFINITIONS } from './tools.js';
-import { callWriteTool, WRITE_TOOL_DEFINITIONS, WRITE_TOOL_NAMES } from './write-tools.js';
+import { toToolResult, type ToolSpec } from './tool-spec.js';
+import { callTool, VOCAB_TOOL_SPECS } from './tools.js';
+import { callWriteTool, WRITE_TOOL_SPECS } from './write-tools.js';
 import { SkAppDataClient } from './write/appdata-client.js';
 
 const SERVER_NAME = 'kip-mcp-server';
@@ -33,6 +28,8 @@ export interface KipMCPServerOptions {
   loadSchema?: () => Promise<SchemaResult>;
   /** Inject a Signal K client (mainly for tests). */
   sk?: SkClient;
+  /** Inject an applicationData client (mainly for tests). */
+  appData?: SkAppDataClient;
 }
 
 const RESOURCES = [
@@ -59,10 +56,12 @@ const RESOURCES = [
 /**
  * The KIP MCP server: exposes the design-vocabulary tools and resources over MCP.
  * The heavy logic lives in tested modules (tools, vocabulary, schema); this class
- * is the thin wiring to the Model Context Protocol.
+ * is the thin wiring to the Model Context Protocol. It uses the high-level
+ * `McpServer` API so each tool carries a zod input schema, an output schema and
+ * behaviour annotations, and every call returns structured content.
  */
 export class KipMCPServer {
-  private readonly server: Server;
+  private readonly server: McpServer;
   private readonly loadSchemaFn: () => Promise<SchemaResult>;
   private readonly sk: SkClient;
   private readonly appData: SkAppDataClient;
@@ -73,12 +72,11 @@ export class KipMCPServer {
     this.schema = options.schema;
     this.loadSchemaFn = options.loadSchema ?? (() => loadKipSchema({ baseUrl: config.kipBaseUrl }));
     this.sk = options.sk ?? new SkClient({ baseUrl: config.signalkBaseUrl, token: config.token });
-    this.appData = new SkAppDataClient({ baseUrl: config.signalkBaseUrl, token: config.token });
-    this.server = new Server(
-      { name: SERVER_NAME, version: SERVER_VERSION },
-      { capabilities: { tools: {}, resources: {} } },
-    );
-    this.registerHandlers();
+    this.appData =
+      options.appData ?? new SkAppDataClient({ baseUrl: config.signalkBaseUrl, token: config.token });
+    this.server = new McpServer({ name: SERVER_NAME, version: SERVER_VERSION });
+    this.registerTools();
+    this.registerResources();
   }
 
   private async getSchema(): Promise<KipDashboardSchema> {
@@ -92,46 +90,60 @@ export class KipMCPServer {
     return this.schema;
   }
 
-  private registerHandlers(): void {
-    this.server.setRequestHandler(ListToolsRequestSchema, () => ({
-      tools: [
-        ...TOOL_DEFINITIONS,
-        ...DISCOVERY_TOOL_DEFINITIONS,
-        ...COMPOSE_TOOL_DEFINITIONS,
-        ...WRITE_TOOL_DEFINITIONS,
-      ],
-    }));
+  private registerTools(): void {
+    const groups: Array<{
+      specs: ToolSpec[];
+      run: (name: string, args: Record<string, unknown>) => unknown | Promise<unknown>;
+    }> = [
+      {
+        specs: VOCAB_TOOL_SPECS,
+        run: async (name, args) => callTool(await this.getSchema(), name, args),
+      },
+      {
+        specs: DISCOVERY_TOOL_SPECS,
+        run: (name, args) => callDiscoveryTool(this.sk, name, args),
+      },
+      {
+        specs: COMPOSE_TOOL_SPECS,
+        run: async (name, args) => callComposeTool(await this.getSchema(), this.sk, name, args),
+      },
+      {
+        specs: WRITE_TOOL_SPECS,
+        run: async (name, args) =>
+          callWriteTool(await this.getSchema(), this.appData, this.sk, name, args),
+      },
+    ];
 
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const { name } = request.params;
-      const args = request.params.arguments ?? {};
-      try {
-        let result: unknown;
-        if (DISCOVERY_TOOL_NAMES.has(name)) {
-          result = await callDiscoveryTool(this.sk, name, args);
-        } else if (COMPOSE_TOOL_NAMES.has(name)) {
-          result = await callComposeTool(await this.getSchema(), this.sk, name, args);
-        } else if (WRITE_TOOL_NAMES.has(name)) {
-          result = await callWriteTool(await this.getSchema(), this.appData, this.sk, name, args);
-        } else {
-          result = callTool(await this.getSchema(), name, args);
-        }
-        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        return { content: [{ type: 'text', text: message }], isError: true };
+    for (const group of groups) {
+      for (const spec of group.specs) {
+        this.server.registerTool(
+          spec.name,
+          {
+            title: spec.title,
+            description: spec.description,
+            inputSchema: spec.inputSchema,
+            outputSchema: spec.outputSchema,
+            annotations: spec.annotations,
+          },
+          async (args) => toToolResult(await group.run(spec.name, (args ?? {}) as Record<string, unknown>)),
+        );
       }
-    });
+    }
+  }
 
-    this.server.setRequestHandler(ListResourcesRequestSchema, () => ({ resources: RESOURCES }));
-
-    this.server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-      const { uri } = request.params;
-      const schema = await this.getSchema();
-      const text = this.readResource(uri, schema);
-      const mimeType = uri === 'kip://initial_context' ? 'text/markdown' : 'application/json';
-      return { contents: [{ uri, mimeType, text }] };
-    });
+  private registerResources(): void {
+    for (const resource of RESOURCES) {
+      this.server.registerResource(
+        resource.name,
+        resource.uri,
+        { description: resource.description, mimeType: resource.mimeType },
+        async () => {
+          const schema = await this.getSchema();
+          const text = this.readResource(resource.uri, schema);
+          return { contents: [{ uri: resource.uri, mimeType: resource.mimeType, text }] };
+        },
+      );
+    }
   }
 
   private readResource(uri: string, schema: KipDashboardSchema): string {
@@ -148,7 +160,7 @@ export class KipMCPServer {
   }
 
   /** Connects the server to a transport (used by tests with an in-memory transport). */
-  async connect(transport: Parameters<Server['connect']>[0]): Promise<void> {
+  async connect(transport: Parameters<McpServer['connect']>[0]): Promise<void> {
     await this.server.connect(transport);
   }
 

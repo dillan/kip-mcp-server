@@ -2,64 +2,81 @@
  * MCP tool definitions and dispatch for reading and writing KIP config in the
  * Signal K applicationData store. Writes default to a dry run.
  */
+import { z } from 'zod';
 import type { SkClient } from './discovery/sk-client.js';
 import type { KipDashboardSchema } from './schema/schema-types.js';
-import { ToolError, type ToolDefinition } from './tools.js';
+import { kipObject, READ_ONLY_REMOTE, WRITE_REMOTE, type ToolSpec } from './tool-spec.js';
+import { ToolError } from './tools.js';
 import type { SkAppDataClient } from './write/appdata-client.js';
 import { buildApplyPlan, supportsApplicationData, type ApplyMode } from './write/apply-plan.js';
 
-const SCOPE_ENUM = ['user', 'global'];
-const MODE_ENUM = ['append-dashboards', 'replace-dashboards', 'full-replace'];
+const SCOPE_ENUM = ['user', 'global'] as const;
+const MODE_ENUM = ['append-dashboards', 'replace-dashboards', 'full-replace'] as const;
 
-export const WRITE_TOOL_DEFINITIONS: ToolDefinition[] = [
+export const WRITE_TOOL_SPECS: ToolSpec[] = [
   {
     name: 'read_kip_config',
+    title: 'Read KIP config',
     description: 'Read the KIP config stored on the Signal K server, and list the available config names.',
     inputSchema: {
-      type: 'object',
-      properties: {
-        scope: { type: 'string', enum: SCOPE_ENUM },
-        configName: { type: 'string' },
-        fileVersion: { type: 'number' },
-      },
-      additionalProperties: false,
+      scope: z.enum(SCOPE_ENUM).optional(),
+      configName: z.string().optional(),
+      fileVersion: z.number().optional(),
     },
+    outputSchema: {
+      exists: z.boolean(),
+      config: z.unknown().optional(),
+      listing: z.array(z.unknown()).optional(),
+    },
+    annotations: READ_ONLY_REMOTE,
   },
   {
     name: 'backup_kip_config',
+    title: 'Back up KIP config',
     description: 'Return the current stored KIP config so it can be kept as a backup before changes.',
     inputSchema: {
-      type: 'object',
-      properties: {
-        scope: { type: 'string', enum: SCOPE_ENUM },
-        configName: { type: 'string' },
-        fileVersion: { type: 'number' },
-      },
-      additionalProperties: false,
+      scope: z.enum(SCOPE_ENUM).optional(),
+      configName: z.string().optional(),
+      fileVersion: z.number().optional(),
     },
+    outputSchema: {
+      exists: z.boolean(),
+      backup: z.unknown().optional(),
+    },
+    annotations: READ_ONLY_REMOTE,
   },
   {
     name: 'apply_kip_config',
+    title: 'Apply KIP config',
     description:
       'Write dashboards to the KIP config on the Signal K server. Dry run by default — it shows what it would do; pass dryRun:false and confirm:true to actually write. Falls back to a file export on old servers.',
     inputSchema: {
-      type: 'object',
-      properties: {
-        dashboards: { type: 'array', items: { type: 'object' } },
-        scope: { type: 'string', enum: SCOPE_ENUM },
-        configName: { type: 'string' },
-        fileVersion: { type: 'number' },
-        mode: { type: 'string', enum: MODE_ENUM },
-        dryRun: { type: 'boolean' },
-        confirm: { type: 'boolean' },
-      },
-      required: ['dashboards'],
-      additionalProperties: false,
+      dashboards: z.array(kipObject),
+      scope: z.enum(SCOPE_ENUM).optional(),
+      configName: z.string().optional(),
+      fileVersion: z.number().optional(),
+      mode: z.enum(MODE_ENUM).optional(),
+      dryRun: z.boolean().optional(),
+      confirm: z.boolean().optional(),
     },
+    outputSchema: {
+      refused: z.boolean().optional(),
+      reason: z.string().optional(),
+      suggestion: z.string().optional(),
+      ok: z.boolean().optional(),
+      errors: z.array(z.string()).optional(),
+      warnings: z.array(z.string()).optional(),
+      dryRun: z.boolean().optional(),
+      wouldWrite: z.array(z.unknown()).optional(),
+      note: z.string().optional(),
+      applied: z.boolean().optional(),
+      wrote: z.array(z.unknown()).optional(),
+    },
+    annotations: WRITE_REMOTE,
   },
 ];
 
-export const WRITE_TOOL_NAMES: ReadonlySet<string> = new Set(WRITE_TOOL_DEFINITIONS.map((t) => t.name));
+export const WRITE_TOOL_NAMES: ReadonlySet<string> = new Set(WRITE_TOOL_SPECS.map((t) => t.name));
 
 export async function callWriteTool(
   schema: KipDashboardSchema,

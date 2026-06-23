@@ -2,51 +2,67 @@
  * MCP tool definitions and dispatch for the Signal K data-discovery tools.
  * These need a live Signal K server (an SkClient).
  */
+import { z } from 'zod';
 import { discoverInventory } from './discovery/discover.js';
 import { flattenVesselData } from './discovery/inventory.js';
 import type { SkClient } from './discovery/sk-client.js';
-import { ToolError, type ToolDefinition } from './tools.js';
+import { kipObject, READ_ONLY_REMOTE, type ToolSpec } from './tool-spec.js';
+import { ToolError } from './tools.js';
 
-export const DISCOVERY_TOOL_DEFINITIONS: ToolDefinition[] = [
+export const DISCOVERY_TOOL_SPECS: ToolSpec[] = [
   {
     name: 'analyze_signalk_data',
+    title: 'Analyse Signal K data',
     description:
       "Analyse the boat's Signal K data: the available paths with units, the vessel capabilities, and installed plugins. Use this before recommending dashboards.",
-    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+    inputSchema: {},
+    outputSchema: {
+      server: kipObject,
+      capabilities: kipObject,
+      pathCount: z.number(),
+      paths: z.array(kipObject),
+      plugins: z.array(kipObject),
+    },
+    annotations: READ_ONLY_REMOTE,
   },
   {
     name: 'list_available_paths',
+    title: 'List available paths',
     description: 'List the Signal K data paths available on the boat, optionally filtered by prefix.',
     inputSchema: {
-      type: 'object',
-      properties: { prefix: { type: 'string', description: 'Only list paths starting with this prefix.' } },
-      additionalProperties: false,
+      prefix: z.string().optional().describe('Only list paths starting with this prefix.'),
     },
+    outputSchema: { paths: z.array(z.string()) },
+    annotations: READ_ONLY_REMOTE,
   },
   {
     name: 'get_path_meta',
+    title: 'Get path metadata',
     description: 'Get metadata (units, description, value type, zones) for specific Signal K paths.',
-    inputSchema: {
-      type: 'object',
-      properties: { paths: { type: 'array', items: { type: 'string' }, description: 'Paths to describe.' } },
-      required: ['paths'],
-      additionalProperties: false,
-    },
+    inputSchema: { paths: z.array(z.string()).describe('Paths to describe.') },
+    outputSchema: { meta: z.array(kipObject) },
+    annotations: READ_ONLY_REMOTE,
   },
   {
     name: 'get_server_info',
+    title: 'Get Signal K server info',
     description: 'Get the Signal K server version and id.',
-    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+    inputSchema: {},
+    outputSchema: { version: z.string(), serverId: z.string().optional() },
+    annotations: READ_ONLY_REMOTE,
   },
   {
     name: 'list_installed_plugins',
+    title: 'List installed plugins',
     description: 'List the Signal K server plugins and whether each is enabled.',
-    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+    inputSchema: {},
+    outputSchema: { plugins: z.array(kipObject) },
+    annotations: READ_ONLY_REMOTE,
   },
 ];
 
 export const DISCOVERY_TOOL_NAMES: ReadonlySet<string> = new Set(
-  DISCOVERY_TOOL_DEFINITIONS.map((t) => t.name),
+  DISCOVERY_TOOL_SPECS.map((t) => t.name),
 );
 
 /** Runs a discovery tool against a live Signal K server. */

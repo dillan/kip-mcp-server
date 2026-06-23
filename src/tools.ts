@@ -4,8 +4,10 @@
  * The dispatch (`callTool`) is kept separate from the MCP transport wiring so it
  * can be tested directly.
  */
+import { z } from 'zod';
 import { readResourceText } from './resources.js';
 import type { KipDashboardSchema } from './schema/schema-types.js';
+import { kipObject, READ_ONLY_LOCAL, type ToolSpec } from './tool-spec.js';
 import { validateDashboard } from './validators.js';
 import { getDesignSystem, getUnitOptions, getWidgetSchema, listWidgets } from './vocabulary.js';
 import { buildKipConfig } from './write/config-builder.js';
@@ -14,89 +16,106 @@ export class ToolError extends Error {
   override name = 'ToolError';
 }
 
-export interface ToolDefinition {
-  name: string;
-  description: string;
-  inputSchema: Record<string, unknown>;
-}
+const CATEGORY_ENUM = ['Core', 'Gauge', 'Component', 'Racing'] as const;
 
-const CATEGORY_ENUM = ['Core', 'Gauge', 'Component', 'Racing'];
-
-export const TOOL_DEFINITIONS: ToolDefinition[] = [
+export const VOCAB_TOOL_SPECS: ToolSpec[] = [
   {
     name: 'get_kip_initial_context',
+    title: 'KIP initial context',
     description:
       'Start here. Explains how to design KIP dashboards and summarises the available widgets and design system.',
-    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+    inputSchema: {},
+    outputSchema: {
+      overview: z.string(),
+      kipVersion: z.string(),
+      widgetCount: z.number(),
+      categories: z.array(z.string()),
+      grid: kipObject,
+      colorTokens: z.array(z.string()),
+    },
+    annotations: READ_ONLY_LOCAL,
   },
   {
     name: 'list_kip_widgets',
+    title: 'List KIP widgets',
     description:
       "List KIP's widget catalog, optionally filtered by category or to widgets that need no plugins.",
     inputSchema: {
-      type: 'object',
-      properties: {
-        category: { type: 'string', enum: CATEGORY_ENUM, description: 'Only list widgets in this category.' },
-        requiresNoPlugins: {
-          type: 'boolean',
-          description: 'Only list widgets that work with no Signal K plugins.',
-        },
-      },
-      additionalProperties: false,
+      category: z.enum(CATEGORY_ENUM).optional().describe('Only list widgets in this category.'),
+      requiresNoPlugins: z
+        .boolean()
+        .optional()
+        .describe('Only list widgets that work with no Signal K plugins.'),
     },
+    outputSchema: { widgets: z.array(kipObject) },
+    annotations: READ_ONLY_LOCAL,
   },
   {
     name: 'get_widget_schema',
+    title: 'Get widget schema',
     description: "Get one widget's default config, binding kind and data path slots.",
-    inputSchema: {
-      type: 'object',
-      properties: { selector: { type: 'string', description: 'Widget selector, e.g. widget-numeric.' } },
-      required: ['selector'],
-      additionalProperties: false,
-    },
+    inputSchema: { selector: z.string().describe('Widget selector, e.g. widget-numeric.') },
+    outputSchema: { widget: kipObject },
+    annotations: READ_ONLY_LOCAL,
   },
   {
     name: 'get_design_system',
+    title: 'Get design system',
     description:
       "Get KIP's design system: grid, colour tokens, theme names, dashboard icons and unit groups.",
-    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+    inputSchema: {},
+    outputSchema: {
+      grid: kipObject,
+      colors: z.array(kipObject),
+      themeNames: z.array(z.string()),
+      icons: z.array(z.string()),
+      unitGroups: z.array(kipObject),
+    },
+    annotations: READ_ONLY_LOCAL,
   },
   {
     name: 'get_unit_options',
+    title: 'Get unit options',
     description:
       'For a Signal K base unit (e.g. rad, m/s, K, Pa), list the KIP unit group and convertible measures.',
-    inputSchema: {
-      type: 'object',
-      properties: { skUnit: { type: 'string', description: 'Signal K base unit, e.g. rad.' } },
-      required: ['skUnit'],
-      additionalProperties: false,
+    inputSchema: { skUnit: z.string().describe('Signal K base unit, e.g. rad.') },
+    outputSchema: {
+      found: z.boolean(),
+      skUnit: z.string(),
+      note: z.string().optional(),
+      group: z.string().optional(),
+      measures: z.array(kipObject).optional(),
     },
+    annotations: READ_ONLY_LOCAL,
   },
   {
     name: 'validate_kip_config',
+    title: 'Validate KIP dashboard',
     description:
       'Validate a KIP dashboard object: structure, the widget-host2 invariants (id===uuid, known widget types), grid bounds, overlaps, and colour/icon/unit sanity. Returns errors and warnings.',
-    inputSchema: {
-      type: 'object',
-      properties: { dashboard: { type: 'object', description: 'A KIP dashboard object.' } },
-      required: ['dashboard'],
-      additionalProperties: false,
+    inputSchema: { dashboard: kipObject.describe('A KIP dashboard object.') },
+    outputSchema: {
+      ok: z.boolean(),
+      errors: z.array(z.string()),
+      warnings: z.array(z.string()),
     },
+    annotations: READ_ONLY_LOCAL,
   },
   {
     name: 'export_kip_config',
+    title: 'Export KipConfig.json',
     description:
       'Build a complete KipConfig.json from dashboards that a user can import via KIP Settings. Works on any Signal K server (no write to the server). Returns the file contents.',
     inputSchema: {
-      type: 'object',
-      properties: {
-        dashboards: { type: 'array', items: { type: 'object' }, description: 'Dashboards to include.' },
-        theme: { type: 'string', description: "Theme name (default '')." },
-        units: { type: 'object', description: 'Unit-default overrides, e.g. { Speed: "kph" }.' },
-      },
-      required: ['dashboards'],
-      additionalProperties: false,
+      dashboards: z.array(kipObject).describe('Dashboards to include.'),
+      theme: z.string().optional().describe("Theme name (default '')."),
+      units: z
+        .record(z.string(), z.string())
+        .optional()
+        .describe('Unit-default overrides, e.g. { Speed: "kph" }.'),
     },
+    outputSchema: { filename: z.string(), json: z.string() },
+    annotations: READ_ONLY_LOCAL,
   },
 ];
 

@@ -13,10 +13,19 @@ try {
   if (!names.includes('list_kip_widgets')) {
     throw new Error(`expected list_kip_widgets, got: ${names.join(', ')}`);
   }
+  // World-class surface: tools advertise output schemas and behaviour hints.
+  const widgets = tools.find((t) => t.name === 'list_kip_widgets');
+  if (!widgets?.outputSchema || widgets.annotations?.readOnlyHint !== true) {
+    throw new Error('list_kip_widgets is missing its output schema or read-only annotation');
+  }
   const result = await client.callTool({ name: 'get_kip_initial_context', arguments: {} });
   const text = result.content?.[0]?.text ?? '';
   if (!text.includes('KIP')) {
     throw new Error('get_kip_initial_context did not return the expected overview');
+  }
+  // Calls return machine-readable structured content next to the text block.
+  if (typeof result.structuredContent?.overview !== 'string') {
+    throw new Error('get_kip_initial_context did not return structured content');
   }
   await client.close();
   console.log(`SMOKE OK — ${names.length} tools: ${names.join(', ')}`);

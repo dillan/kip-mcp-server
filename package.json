@@ -23,7 +23,8 @@
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:unit": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
-    "ci": "npm run typecheck && npm run lint && npm run build && npm run test:coverage",
+    "smoke": "node scripts/smoke.mjs",
+    "ci": "npm run typecheck && npm run lint && npm run build && npm run test:coverage && npm run smoke",
     "prepare": "husky"
   },
   "keywords": [

@@ -10,15 +10,11 @@ Pick your assistant and follow its short guide. They all do the same thing: they
 
 ## Before you start
 
-Build the server once (see the main [README](../../README.md)):
+You need [Node.js](https://nodejs.org) 24 or newer. Each guide uses `npx -y kip-mcp-server`,
+which downloads and runs the server on demand — there's nothing to install first.
 
-```bash
-npm ci
-npm run build
-```
-
-Note the full path to `dist/index.js` — you'll point your assistant at it. For example:
-`/Users/you/kip-mcp-server/dist/index.js`.
+Prefer to run a local build instead of `npx`? Build it once (`npm ci && npm run build`) and
+use `node /full/path/to/dist/index.js` wherever a guide says `npx -y kip-mcp-server`.
 
 ## Settings you'll provide
 

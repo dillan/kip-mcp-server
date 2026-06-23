@@ -26,13 +26,14 @@ network), with KIP installed.
 
 1. **Find your Signal K address.** It usually looks like `http://your-boat:3000`. Note
    the host name (or IP) and port.
-2. **Get this server.** Until it's published, build it from source:
+2. **Get this server.** You don't need to install anything by hand — your AI assistant can
+   run it on demand with [`npx`](https://docs.npmjs.com/cli/commands/npx) (which comes with
+   [Node.js](https://nodejs.org) 24 or newer):
    ```bash
-   git clone https://github.com/dillan/kip-mcp-server.git
-   cd kip-mcp-server
-   npm ci
-   npm run build
+   npx -y kip-mcp-server
    ```
+   The next step wires this command into your assistant. (Prefer to build from source? See
+   [Develop](#develop) below.)
 3. **Connect it to your AI assistant.** Pick your assistant in [docs/clients](./docs/clients/)
    and follow the short setup there. You tell the assistant your boat's host and port.
 4. **Ask it to help.** Say something like *"Look at my boat's data and suggest some KIP

@@ -1,3 +1,5 @@
+import type { Credentials } from './signalk/auth.js';
+
 /** Server configuration derived from environment variables. */
 export interface ServerConfig {
   /** Signal K server base URL, e.g. http://host:3000 */
@@ -6,6 +8,8 @@ export interface ServerConfig {
   kipBaseUrl: string;
   /** Optional Signal K auth token (JWT). */
   token?: string;
+  /** Optional username/password login, used when no token is set. */
+  credentials?: Credentials;
 }
 
 /**

@@ -26,4 +26,13 @@ describe('loadConfig', () => {
     expect(config.signalkBaseUrl).toBe('http://boat.local:3000');
     expect(config.token).toBe('jwt-abc');
   });
+
+  it('reads username and password credentials for login', () => {
+    const config = loadConfig({
+      SIGNALK_HOST: 'boat.local',
+      SIGNALK_USER: 'me',
+      SIGNALK_PASSWORD: 'secret',
+    });
+    expect(config.credentials).toEqual({ username: 'me', password: 'secret' });
+  });
 });

@@ -14,24 +14,25 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '24'
           cache: npm
           registry-url: 'https://registry.npmjs.org'
+      # npm Trusted Publishing (OIDC) needs npm >= 11.5.1.
+      - run: npm install -g npm@latest
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run build
       - run: npm run test:coverage
-      # npm publishing is deferred (.releaserc sets npmPublish:false): this produces
-      # the changelog, version bump and GitHub release without publishing to npm, so
-      # it needs no npm token. To publish to npm later: set npmPublish:true in
-      # .releaserc, create an npm Automation token, add it as the NPM_TOKEN secret,
-      # and add `NPM_TOKEN` / `NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}` env here.
+      # Publishes via npm Trusted Publishing (OIDC) — no NPM_TOKEN. semantic-release
+      # exchanges the GitHub Actions OIDC token (id-token: write) for a short-lived npm
+      # token and publishes with provenance automatically. This needs a Trusted Publisher
+      # configured on the npm package first — see docs/publishing.md.
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

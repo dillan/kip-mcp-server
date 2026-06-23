@@ -14,6 +14,8 @@ import { readResourceText } from './resources.js';
 import { loadKipSchema } from './schema/kip-schema.js';
 import type { KipDashboardSchema } from './schema/schema-types.js';
 import { callTool, TOOL_DEFINITIONS } from './tools.js';
+import { callWriteTool, WRITE_TOOL_DEFINITIONS, WRITE_TOOL_NAMES } from './write-tools.js';
+import { SkAppDataClient } from './write/appdata-client.js';
 
 const SERVER_NAME = 'kip-mcp-server';
 const SERVER_VERSION = '0.0.0';
@@ -63,6 +65,7 @@ export class KipMCPServer {
   private readonly server: Server;
   private readonly loadSchemaFn: () => Promise<SchemaResult>;
   private readonly sk: SkClient;
+  private readonly appData: SkAppDataClient;
   private schema?: KipDashboardSchema;
 
   constructor(options: KipMCPServerOptions = {}) {
@@ -70,6 +73,7 @@ export class KipMCPServer {
     this.schema = options.schema;
     this.loadSchemaFn = options.loadSchema ?? (() => loadKipSchema({ baseUrl: config.kipBaseUrl }));
     this.sk = options.sk ?? new SkClient({ baseUrl: config.signalkBaseUrl, token: config.token });
+    this.appData = new SkAppDataClient({ baseUrl: config.signalkBaseUrl, token: config.token });
     this.server = new Server(
       { name: SERVER_NAME, version: SERVER_VERSION },
       { capabilities: { tools: {}, resources: {} } },
@@ -90,7 +94,12 @@ export class KipMCPServer {
 
   private registerHandlers(): void {
     this.server.setRequestHandler(ListToolsRequestSchema, () => ({
-      tools: [...TOOL_DEFINITIONS, ...DISCOVERY_TOOL_DEFINITIONS, ...COMPOSE_TOOL_DEFINITIONS],
+      tools: [
+        ...TOOL_DEFINITIONS,
+        ...DISCOVERY_TOOL_DEFINITIONS,
+        ...COMPOSE_TOOL_DEFINITIONS,
+        ...WRITE_TOOL_DEFINITIONS,
+      ],
     }));
 
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -102,6 +111,8 @@ export class KipMCPServer {
           result = await callDiscoveryTool(this.sk, name, args);
         } else if (COMPOSE_TOOL_NAMES.has(name)) {
           result = await callComposeTool(await this.getSchema(), this.sk, name, args);
+        } else if (WRITE_TOOL_NAMES.has(name)) {
+          result = await callWriteTool(await this.getSchema(), this.appData, this.sk, name, args);
         } else {
           result = callTool(await this.getSchema(), name, args);
         }

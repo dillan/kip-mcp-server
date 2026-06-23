@@ -1,23 +1,87 @@
 # kip-mcp-server
 
-An MCP (Model Context Protocol) server that lets an AI assistant look at your boat's
-[Signal K](https://signalk.org) data and help you design and install
-[KIP](https://github.com/mxtommy/Kip) dashboards.
+An [MCP](https://modelcontextprotocol.io) server that lets an AI assistant (such as
+Claude, Codex, or Gemini) look at your boat's [Signal K](https://signalk.org) data and
+help you design and install [KIP](https://github.com/mxtommy/Kip) dashboards — the
+gauges and panels you see on your chartplotter or tablet.
 
-> **Status: early development.** The project is being built in phases. This first
-> milestone sets up the project, tests, and automated checks. Features land next.
+You stay in control: the assistant shows you a picture of each dashboard first, and it
+only saves anything to your boat after you say yes.
 
-## What it will do
+## What it does
 
-- **Look at your boat's data** — find the Signal K values your boat reports (speed,
-  wind, depth, batteries, engine, and so on).
-- **Suggest dashboards** — propose a general dashboard plus ones for specific jobs
-  (sailing, motoring, power, anchoring, navigation, weather), built from KIP's real
-  widgets.
-- **Show you a preview first** — you see a picture of each dashboard before anything
-  is saved.
-- **Install them for you** — with your OK, it writes the dashboards to your KIP setup
-  (or hands you a file you can import yourself).
+- **Looks at your boat's data.** It finds the values your boat reports through Signal K
+  — speed, wind, depth, batteries, engine, and so on.
+- **Suggests dashboards.** It proposes a general dashboard plus ones for specific jobs:
+  sailing, motoring, power, anchoring, navigation, and weather.
+- **Shows you a preview.** You see a simple picture of each dashboard before anything is
+  saved.
+- **Installs them — with your OK.** It writes the dashboards to your KIP setup, or hands
+  you a file you can import yourself.
+
+## Quick start (for boat owners)
+
+You need a [Signal K](https://signalk.org) server running on your boat (or on your
+network), with KIP installed.
+
+1. **Find your Signal K address.** It usually looks like `http://your-boat:3000`. Note
+   the host name (or IP) and port.
+2. **Get this server.** Until it's published, build it from source:
+   ```bash
+   git clone https://github.com/dillan/kip-mcp-server.git
+   cd kip-mcp-server
+   npm ci
+   npm run build
+   ```
+3. **Connect it to your AI assistant.** Pick your assistant in [docs/clients](./docs/clients/)
+   and follow the short setup there. You tell the assistant your boat's host and port.
+4. **Ask it to help.** Say something like *"Look at my boat's data and suggest some KIP
+   dashboards."* Review the previews it shows you.
+5. **Say yes.** When you're happy, tell it to go ahead. It asks before writing anything.
+   If your Signal K server is older, it gives you a `KipConfig.json` file to import from
+   KIP's Settings instead.
+
+## How to connect it
+
+The server reads a few settings from its environment:
+
+| Setting | What it is | Default |
+| --- | --- | --- |
+| `SIGNALK_HOST` | Your Signal K host name or IP | `localhost` |
+| `SIGNALK_PORT` | Your Signal K port | `3000` |
+| `SIGNALK_TLS` | Set to `true` if your server uses `https` | `false` |
+| `SIGNALK_TOKEN` | A Signal K login token, needed to **write** dashboards | (none) |
+| `KIP_URL` | Override where KIP is served, if it's not the default | (derived) |
+
+Reading your data needs no token. Writing dashboards to the server needs a token; you
+can always use the file-export option instead, which needs nothing extra.
+
+## What the assistant can do
+
+The server gives the assistant a set of tools, grouped by job:
+
+- **Look at the boat** — list the data paths, their units, and which plugins are installed.
+- **Know KIP's parts** — list every KIP widget and how it's configured, plus the colours,
+  icons and units KIP understands.
+- **Design dashboards** — suggest a set of dashboards, build one for a chosen job, and draw
+  a preview.
+- **Check and save** — check a dashboard is well-formed, export it to a file, or write it to
+  the boat (asking first).
+
+## Glossary
+
+A few terms, in plain words:
+
+- **Signal K** — the open system many boats use to share data (speed, wind, depth, …) over
+  the network.
+- **path** — the name of one piece of data, like `navigation.speedOverGround` (speed over
+  ground).
+- **KIP** — the app that shows your boat's data as dashboards of gauges and panels.
+- **widget** — one gauge or panel on a dashboard (a number, a dial, a wind display, …).
+- **dashboard** — a screen full of widgets, laid out on a grid.
+- **token** — like a password for software: it lets the server save changes to your boat.
+- **dry run** — the assistant tells you what it *would* do, without actually doing it. Saving
+  is a dry run by default.
 
 ## Develop
 
@@ -29,11 +93,12 @@ npm run typecheck  # check types
 npm run lint       # check code style
 npm test           # run the tests
 npm run build      # compile to dist/
+npm run smoke      # start the built server and check it answers
 npm run ci         # run the full set of checks
 ```
 
-Commits follow [Conventional Commits](https://www.conventionalcommits.org/); releases
-and version numbers are produced automatically from those commit messages.
+Commits follow [Conventional Commits](https://www.conventionalcommits.org/); releases and
+version numbers are produced automatically from those commit messages.
 
 ## License
 

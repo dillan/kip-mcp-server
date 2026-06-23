@@ -27,9 +27,12 @@ jobs:
       - run: npm run lint
       - run: npm run build
       - run: npm run test:coverage
+      # npm publishing is deferred (.releaserc sets npmPublish:false): this produces
+      # the changelog, version bump and GitHub release without publishing to npm, so
+      # it needs no npm token. To publish to npm later: set npmPublish:true in
+      # .releaserc, create an npm Automation token, add it as the NPM_TOKEN secret,
+      # and add `NPM_TOKEN` / `NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}` env here.
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_CONFIG_PROVENANCE: 'true'
         run: npx semantic-release

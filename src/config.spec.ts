@@ -20,4 +20,10 @@ describe('loadConfig', () => {
   it('defaults the host and port', () => {
     expect(loadConfig({}).kipBaseUrl).toBe('http://localhost:3000/@mxtommy/kip/');
   });
+
+  it('derives the Signal K base URL and passes through a token', () => {
+    const config = loadConfig({ SIGNALK_HOST: 'boat.local', SIGNALK_TOKEN: 'jwt-abc' });
+    expect(config.signalkBaseUrl).toBe('http://boat.local:3000');
+    expect(config.token).toBe('jwt-abc');
+  });
 });

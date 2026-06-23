@@ -1,0 +1,87 @@
+/** A thin read client for a Signal K server. */
+export interface ServerInfo {
+  version: string;
+  serverId?: string;
+}
+
+export interface PluginInfo {
+  id: string;
+  enabled: boolean;
+  version?: string;
+}
+
+export interface SkClientOptions {
+  /** Signal K server base URL, e.g. http://host:3000 */
+  baseUrl: string;
+  /** Optional JWT token (sent as `Authorization: JWT <token>`). */
+  token?: string;
+  fetchImpl?: typeof fetch;
+  timeoutMs?: number;
+}
+
+export class SkClient {
+  private readonly baseUrl: string;
+  private readonly token?: string;
+  private readonly fetchImpl: typeof fetch;
+  private readonly timeoutMs: number;
+
+  constructor(options: SkClientOptions) {
+    this.baseUrl = options.baseUrl.replace(/\/$/, '');
+    this.token = options.token;
+    this.fetchImpl = options.fetchImpl ?? fetch;
+    this.timeoutMs = options.timeoutMs ?? 8000;
+  }
+
+  private async getJson(path: string): Promise<unknown> {
+    const url = `${this.baseUrl}${path}`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    try {
+      const headers: Record<string, string> = {};
+      if (this.token) headers.authorization = `JWT ${this.token}`;
+      const response = await this.fetchImpl(url, { headers, signal: controller.signal });
+      if (response.status === 401 || response.status === 403) {
+        throw new Error(
+          `Signal K returned HTTP ${response.status} for ${path}. ` +
+            `Set SIGNALK_TOKEN, or SIGNALK_USER and SIGNALK_PASSWORD.`,
+        );
+      }
+      if (!response.ok) {
+        throw new Error(`Signal K returned HTTP ${response.status} for ${path}.`);
+      }
+      return await response.json();
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async getServerInfo(): Promise<ServerInfo> {
+    const body = (await this.getJson('/signalk')) as {
+      server?: { id?: string; version?: string };
+      version?: string;
+    };
+    const version = body.server?.version ?? body.version ?? 'unknown';
+    return body.server?.id ? { version, serverId: body.server.id } : { version };
+  }
+
+  async getVesselSelf(): Promise<Record<string, unknown>> {
+    return (await this.getJson('/signalk/v1/api/vessels/self')) as Record<string, unknown>;
+  }
+
+  /** Lists installed plugins. Returns [] when the endpoint is unavailable or unauthorized. */
+  async getPlugins(): Promise<PluginInfo[]> {
+    try {
+      const body = (await this.getJson('/skServer/plugins')) as Array<{
+        id?: string;
+        enabled?: boolean;
+        version?: string;
+      }>;
+      if (!Array.isArray(body)) return [];
+      return body
+        .filter((p): p is { id: string; enabled?: boolean; version?: string } => typeof p.id === 'string')
+        .map((p) => (p.version ? { id: p.id, enabled: p.enabled === true, version: p.version } : { id: p.id, enabled: p.enabled === true }));
+    } catch {
+      return [];
+    }
+  }
+}

@@ -7,6 +7,8 @@ import {
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { loadConfig } from './config.js';
+import { callDiscoveryTool, DISCOVERY_TOOL_DEFINITIONS, DISCOVERY_TOOL_NAMES } from './discovery-tools.js';
+import { SkClient } from './discovery/sk-client.js';
 import { readResourceText } from './resources.js';
 import { loadKipSchema } from './schema/kip-schema.js';
 import type { KipDashboardSchema } from './schema/schema-types.js';
@@ -26,6 +28,8 @@ export interface KipMCPServerOptions {
   schema?: KipDashboardSchema;
   /** Inject a schema loader (mainly for tests). */
   loadSchema?: () => Promise<SchemaResult>;
+  /** Inject a Signal K client (mainly for tests). */
+  sk?: SkClient;
 }
 
 const RESOURCES = [
@@ -57,12 +61,14 @@ const RESOURCES = [
 export class KipMCPServer {
   private readonly server: Server;
   private readonly loadSchemaFn: () => Promise<SchemaResult>;
+  private readonly sk: SkClient;
   private schema?: KipDashboardSchema;
 
   constructor(options: KipMCPServerOptions = {}) {
+    const config = loadConfig();
     this.schema = options.schema;
-    this.loadSchemaFn =
-      options.loadSchema ?? (() => loadKipSchema({ baseUrl: loadConfig().kipBaseUrl }));
+    this.loadSchemaFn = options.loadSchema ?? (() => loadKipSchema({ baseUrl: config.kipBaseUrl }));
+    this.sk = options.sk ?? new SkClient({ baseUrl: config.signalkBaseUrl, token: config.token });
     this.server = new Server(
       { name: SERVER_NAME, version: SERVER_VERSION },
       { capabilities: { tools: {}, resources: {} } },
@@ -82,12 +88,17 @@ export class KipMCPServer {
   }
 
   private registerHandlers(): void {
-    this.server.setRequestHandler(ListToolsRequestSchema, () => ({ tools: TOOL_DEFINITIONS }));
+    this.server.setRequestHandler(ListToolsRequestSchema, () => ({
+      tools: [...TOOL_DEFINITIONS, ...DISCOVERY_TOOL_DEFINITIONS],
+    }));
 
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const schema = await this.getSchema();
+      const { name } = request.params;
+      const args = request.params.arguments ?? {};
       try {
-        const result = callTool(schema, request.params.name, request.params.arguments ?? {});
+        const result = DISCOVERY_TOOL_NAMES.has(name)
+          ? await callDiscoveryTool(this.sk, name, args)
+          : callTool(await this.getSchema(), name, args);
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

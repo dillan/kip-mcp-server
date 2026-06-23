@@ -10,7 +10,14 @@ import { getTemplate, TEMPLATES } from './compose/templates.js';
 import { discoverInventory } from './discovery/discover.js';
 import type { SkClient } from './discovery/sk-client.js';
 import type { KipDashboardSchema } from './schema/schema-types.js';
-import { kipObject, READ_ONLY_LOCAL, READ_ONLY_REMOTE, type ToolSpec } from './tool-spec.js';
+import {
+  kipObject,
+  makeProgressReporter,
+  READ_ONLY_LOCAL,
+  READ_ONLY_REMOTE,
+  type ToolCtx,
+  type ToolSpec,
+} from './tool-spec.js';
 import { ToolError } from './tools.js';
 
 const INTENT_IDS = TEMPLATES.map((t) => t.id);
@@ -72,6 +79,7 @@ export async function callComposeTool(
   sk: SkClient,
   name: string,
   args: Record<string, unknown> = {},
+  ctx?: ToolCtx,
 ): Promise<unknown> {
   switch (name) {
     case 'compose_dashboard': {
@@ -80,12 +88,12 @@ export async function callComposeTool(
       if (!template) {
         throw new ToolError(`Unknown intent "${intent}". Known intents: ${INTENT_IDS.join(', ')}.`);
       }
-      const ctx = await buildContext(schema, sk);
+      const resolveCtx = await buildContext(schema, sk);
       const override = {
         ...(typeof args.name === 'string' ? { name: args.name } : {}),
         ...(typeof args.icon === 'string' ? { icon: args.icon } : {}),
       };
-      const result = composeDashboard(template, ctx, uuidv4, override);
+      const result = composeDashboard(template, resolveCtx, uuidv4, override);
       return {
         dashboard: result.dashboard,
         dropped: result.dropped,
@@ -96,21 +104,29 @@ export async function callComposeTool(
 
     case 'recommend_dashboard_set': {
       const wanted = Array.isArray(args.intents) ? new Set(args.intents.map(String)) : null;
-      const ctx = await buildContext(schema, sk);
+      const report = makeProgressReporter(ctx);
+      const total = TEMPLATES.length + 1;
+      await report(0, total, 'Discovering boat data');
+      const resolveCtx = await buildContext(schema, sk);
       const dashboards = [];
-      for (const template of TEMPLATES) {
-        if (wanted && !wanted.has(template.id)) continue;
-        const result = composeDashboard(template, ctx, uuidv4);
-        if (result.dashboard.configuration.length === 0) continue;
-        dashboards.push({
-          intent: template.id,
-          dashboard: result.dashboard,
-          dropped: result.dropped,
-          notes: result.notes,
-          preview: previewAscii(result.dashboard),
-        });
+      for (let i = 0; i < TEMPLATES.length; i++) {
+        const template = TEMPLATES[i];
+        if (!wanted || wanted.has(template.id)) {
+          const result = composeDashboard(template, resolveCtx, uuidv4);
+          if (result.dashboard.configuration.length > 0) {
+            dashboards.push({
+              intent: template.id,
+              dashboard: result.dashboard,
+              dropped: result.dropped,
+              notes: result.notes,
+              preview: previewAscii(result.dashboard),
+            });
+          }
+        }
+        await report(i + 1, total, `Evaluated ${template.id}`);
       }
       const built = new Set(dashboards.map((d) => d.intent));
+      await report(total, total, 'Recommendations ready');
       return { dashboards, unsupported: INTENT_IDS.filter((id) => !built.has(id)) };
     }
 

@@ -12,7 +12,13 @@
  * results are marked `.optional()` so output validation never fails by surprise.
  */
 import { z } from 'zod';
-import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js';
+import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import type { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import type {
+  ServerNotification,
+  ServerRequest,
+  ToolAnnotations,
+} from '@modelcontextprotocol/sdk/types.js';
 
 export interface ToolSpec {
   name: string;
@@ -58,4 +64,33 @@ export function toToolResult(result: unknown): ToolResult {
     content: [{ type: 'text', text: JSON.stringify(value, null, 2) }],
     structuredContent: value,
   };
+}
+
+/**
+ * Per-call context passed to the tool dispatchers: the low-level server (for
+ * elicitation) and the request `extra` (for progress and cancellation).
+ */
+export interface ToolCtx {
+  server: Server;
+  extra: RequestHandlerExtra<ServerRequest, ServerNotification>;
+}
+
+/** Reports progress on a multi-step tool. A no-op unless the caller sent a progressToken. */
+export type ProgressReporter = (progress: number, total: number, message?: string) => Promise<void>;
+
+/**
+ * Builds a progress reporter for a tool call. If the caller did not supply a
+ * progressToken (via request `_meta`), the reporter is a no-op, so progress is
+ * only emitted when someone is listening.
+ */
+export function makeProgressReporter(ctx?: ToolCtx): ProgressReporter {
+  const token = ctx?.extra._meta?.progressToken;
+  if (token === undefined) {
+    return () => Promise.resolve();
+  }
+  return (progress, total, message) =>
+    ctx!.extra.sendNotification({
+      method: 'notifications/progress',
+      params: { progressToken: token, progress, total, ...(message ? { message } : {}) },
+    });
 }

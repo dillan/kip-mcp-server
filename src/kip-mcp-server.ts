@@ -9,7 +9,7 @@ import { readResourceText } from './resources.js';
 import { loadKipSchema } from './schema/kip-schema.js';
 import type { KipDashboardSchema } from './schema/schema-types.js';
 import { TokenProvider } from './signalk/auth.js';
-import { toToolResult, type ToolSpec } from './tool-spec.js';
+import { toToolResult, type ToolCtx, type ToolSpec } from './tool-spec.js';
 import { callTool, VOCAB_TOOL_SPECS } from './tools.js';
 import { callWriteTool, WRITE_TOOL_SPECS } from './write-tools.js';
 import { SkAppDataClient } from './write/appdata-client.js';
@@ -84,7 +84,10 @@ export class KipMCPServer {
     this.sk = options.sk ?? new SkClient({ baseUrl: config.signalkBaseUrl, getToken });
     this.appData =
       options.appData ?? new SkAppDataClient({ baseUrl: config.signalkBaseUrl, getToken });
-    this.server = new McpServer({ name: SERVER_NAME, version: SERVER_VERSION });
+    this.server = new McpServer(
+      { name: SERVER_NAME, version: SERVER_VERSION },
+      { capabilities: { logging: {} } },
+    );
     this.registerTools();
     this.registerResources();
     this.registerPrompts();
@@ -95,16 +98,32 @@ export class KipMCPServer {
       const result = await this.loadSchemaFn();
       this.schema = result.schema;
       if (result.warning) {
-        console.error(`[kip-mcp-server] ${result.warning}`);
+        await this.log('warning', result.warning);
       }
     }
     return this.schema;
   }
 
+  /**
+   * Sends a log message to the connected client, falling back to stderr when the
+   * server is not connected or the client cannot receive it.
+   */
+  private async log(level: 'warning' | 'error' | 'info', data: string): Promise<void> {
+    if (this.server.isConnected()) {
+      try {
+        await this.server.sendLoggingMessage({ level, logger: SERVER_NAME, data });
+        return;
+      } catch {
+        // Fall through to stderr below.
+      }
+    }
+    console.error(`[${SERVER_NAME}] ${level}: ${data}`);
+  }
+
   private registerTools(): void {
     const groups: Array<{
       specs: ToolSpec[];
-      run: (name: string, args: Record<string, unknown>) => unknown | Promise<unknown>;
+      run: (name: string, args: Record<string, unknown>, ctx?: ToolCtx) => unknown | Promise<unknown>;
     }> = [
       {
         specs: VOCAB_TOOL_SPECS,
@@ -112,16 +131,17 @@ export class KipMCPServer {
       },
       {
         specs: DISCOVERY_TOOL_SPECS,
-        run: (name, args) => callDiscoveryTool(this.sk, name, args),
+        run: (name, args, ctx) => callDiscoveryTool(this.sk, name, args, ctx),
       },
       {
         specs: COMPOSE_TOOL_SPECS,
-        run: async (name, args) => callComposeTool(await this.getSchema(), this.sk, name, args),
+        run: async (name, args, ctx) =>
+          callComposeTool(await this.getSchema(), this.sk, name, args, ctx),
       },
       {
         specs: WRITE_TOOL_SPECS,
-        run: async (name, args) =>
-          callWriteTool(await this.getSchema(), this.appData, this.sk, name, args),
+        run: async (name, args, ctx) =>
+          callWriteTool(await this.getSchema(), this.appData, this.sk, name, args, ctx),
       },
     ];
 
@@ -136,7 +156,13 @@ export class KipMCPServer {
             outputSchema: spec.outputSchema,
             annotations: spec.annotations,
           },
-          async (args) => toToolResult(await group.run(spec.name, (args ?? {}) as Record<string, unknown>)),
+          async (args, extra) =>
+            toToolResult(
+              await group.run(spec.name, (args ?? {}) as Record<string, unknown>, {
+                server: this.server.server,
+                extra,
+              }),
+            ),
         );
       }
     }

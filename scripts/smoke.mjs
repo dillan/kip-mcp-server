@@ -27,8 +27,13 @@ try {
   if (typeof result.structuredContent?.overview !== 'string') {
     throw new Error('get_kip_initial_context did not return structured content');
   }
+  // Guided prompts are exposed for one-click workflows.
+  const { prompts } = await client.listPrompts();
+  if (!prompts.some((p) => p.name === 'design_dashboards')) {
+    throw new Error('expected the design_dashboards prompt to be listed');
+  }
   await client.close();
-  console.log(`SMOKE OK — ${names.length} tools: ${names.join(', ')}`);
+  console.log(`SMOKE OK — ${names.length} tools, ${prompts.length} prompts: ${names.join(', ')}`);
   process.exit(0);
 } catch (error) {
   console.error('SMOKE FAILED:', error);

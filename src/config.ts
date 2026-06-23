@@ -27,7 +27,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
   const kipBaseUrl = override ? ensureTrailingSlash(override) : `${signalkBaseUrl}/@mxtommy/kip/`;
 
   const token = env.SIGNALK_TOKEN?.trim();
-  return token ? { signalkBaseUrl, kipBaseUrl, token } : { signalkBaseUrl, kipBaseUrl };
+  const username = env.SIGNALK_USER?.trim();
+  const password = env.SIGNALK_PASSWORD?.trim();
+
+  const config: ServerConfig = { signalkBaseUrl, kipBaseUrl };
+  if (token) config.token = token;
+  if (username && password) config.credentials = { username, password };
+  return config;
 }
 
 function ensureTrailingSlash(url: string): string {

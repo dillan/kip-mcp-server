@@ -4,6 +4,8 @@ export interface AppDataClientOptions {
   /** Signal K server base URL, e.g. http://host:3000 */
   baseUrl: string;
   token?: string;
+  /** Optional async token source (e.g. a username/password login). Preferred over `token`. */
+  getToken?: () => Promise<string | undefined>;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
 }
@@ -12,12 +14,14 @@ export interface AppDataClientOptions {
 export class SkAppDataClient {
   private readonly base: string;
   private readonly token?: string;
+  private readonly getToken?: () => Promise<string | undefined>;
   private readonly fetchImpl: typeof fetch;
   private readonly timeoutMs: number;
 
   constructor(options: AppDataClientOptions) {
     this.base = `${options.baseUrl.replace(/\/$/, '')}/signalk/v1/applicationData/`;
     this.token = options.token;
+    this.getToken = options.getToken;
     this.fetchImpl = options.fetchImpl ?? fetch;
     this.timeoutMs = options.timeoutMs ?? 8000;
   }
@@ -34,8 +38,9 @@ export class SkAppDataClient {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
+      const token = this.getToken ? await this.getToken() : this.token;
       const headers: Record<string, string> = { 'content-type': 'application/json', ...(init.headers as Record<string, string>) };
-      if (this.token) headers.authorization = `JWT ${this.token}`;
+      if (token) headers.authorization = `JWT ${token}`;
       const response = await this.fetchImpl(url, { ...init, headers, signal: controller.signal });
       if (response.status === 401 || response.status === 403) {
         throw new Error(

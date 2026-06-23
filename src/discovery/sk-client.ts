@@ -15,6 +15,8 @@ export interface SkClientOptions {
   baseUrl: string;
   /** Optional JWT token (sent as `Authorization: JWT <token>`). */
   token?: string;
+  /** Optional async token source (e.g. a username/password login). Preferred over `token`. */
+  getToken?: () => Promise<string | undefined>;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
 }
@@ -22,12 +24,14 @@ export interface SkClientOptions {
 export class SkClient {
   private readonly baseUrl: string;
   private readonly token?: string;
+  private readonly getToken?: () => Promise<string | undefined>;
   private readonly fetchImpl: typeof fetch;
   private readonly timeoutMs: number;
 
   constructor(options: SkClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/$/, '');
     this.token = options.token;
+    this.getToken = options.getToken;
     this.fetchImpl = options.fetchImpl ?? fetch;
     this.timeoutMs = options.timeoutMs ?? 8000;
   }
@@ -37,8 +41,9 @@ export class SkClient {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
+      const token = this.getToken ? await this.getToken() : this.token;
       const headers: Record<string, string> = {};
-      if (this.token) headers.authorization = `JWT ${this.token}`;
+      if (token) headers.authorization = `JWT ${token}`;
       const response = await this.fetchImpl(url, { headers, signal: controller.signal });
       if (response.status === 401 || response.status === 403) {
         throw new Error(

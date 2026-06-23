@@ -13,11 +13,37 @@ export interface Credentials {
  * rejected or returns no token.
  */
 export async function signalkLogin(
-  _baseUrl: string,
-  _credentials: Credentials,
-  _fetchImpl: typeof fetch = fetch,
+  baseUrl: string,
+  credentials: Credentials,
+  fetchImpl: typeof fetch = fetch,
 ): Promise<string> {
-  throw new Error('signalkLogin not implemented');
+  const url = `${baseUrl.replace(/\/$/, '')}/signalk/v1/auth/login`;
+  const response = await fetchImpl(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ username: credentials.username, password: credentials.password }),
+  });
+  if (response.status === 401 || response.status === 403) {
+    throw new Error(
+      `Signal K rejected the login (HTTP ${response.status}). Check SIGNALK_USER and ` +
+        `SIGNALK_PASSWORD.`,
+    );
+  }
+  if (!response.ok) {
+    throw new Error(`Signal K login failed (HTTP ${response.status}).`);
+  }
+  const body = (await response.json()) as { token?: string };
+  if (!body.token) {
+    throw new Error('Signal K login succeeded but returned no token.');
+  }
+  return body.token;
+}
+
+export interface TokenProviderOptions {
+  baseUrl: string;
+  token?: string;
+  credentials?: Credentials;
+  fetchImpl?: typeof fetch;
 }
 
 /**
@@ -25,15 +51,28 @@ export async function signalkLogin(
  * otherwise a username/password login that runs once and is then reused.
  */
 export class TokenProvider {
-  constructor(_opts: {
-    baseUrl: string;
-    token?: string;
-    credentials?: Credentials;
-    fetchImpl?: typeof fetch;
-  }) {}
+  private readonly options: TokenProviderOptions;
+  private pending?: Promise<string>;
+
+  constructor(options: TokenProviderOptions) {
+    this.options = options;
+  }
 
   /** Returns a token, or undefined when no auth is configured. */
   async get(): Promise<string | undefined> {
-    throw new Error('TokenProvider not implemented');
+    if (this.options.token) return this.options.token;
+    if (!this.options.credentials) return undefined;
+    if (!this.pending) {
+      this.pending = signalkLogin(
+        this.options.baseUrl,
+        this.options.credentials,
+        this.options.fetchImpl,
+      ).catch((error: unknown) => {
+        // Drop the cached attempt so a later call can retry the login.
+        this.pending = undefined;
+        throw error;
+      });
+    }
+    return this.pending;
   }
 }

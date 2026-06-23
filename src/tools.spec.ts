@@ -1,11 +1,11 @@
 import { loadBundledSchema } from './schema/kip-schema.js';
-import { callTool, ToolError, TOOL_DEFINITIONS } from './tools.js';
+import { callTool, ToolError, VOCAB_TOOL_SPECS } from './tools.js';
 
 const schema = loadBundledSchema();
 
-describe('TOOL_DEFINITIONS', () => {
-  it('declares the vocabulary tools with object input schemas', () => {
-    const names = TOOL_DEFINITIONS.map((t) => t.name);
+describe('VOCAB_TOOL_SPECS', () => {
+  it('declares the vocabulary tools with zod schemas and read-only hints', () => {
+    const names = VOCAB_TOOL_SPECS.map((t) => t.name);
     expect(names).toEqual(
       expect.arrayContaining([
         'get_kip_initial_context',
@@ -15,8 +15,10 @@ describe('TOOL_DEFINITIONS', () => {
         'get_unit_options',
       ]),
     );
-    for (const tool of TOOL_DEFINITIONS) {
-      expect(tool.inputSchema).toMatchObject({ type: 'object' });
+    for (const tool of VOCAB_TOOL_SPECS) {
+      expect(typeof tool.inputSchema).toBe('object');
+      expect(typeof tool.outputSchema).toBe('object');
+      expect(tool.annotations.readOnlyHint).toBe(true);
       expect(tool.description.length).toBeGreaterThan(10);
     }
   });

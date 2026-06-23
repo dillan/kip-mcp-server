@@ -2,6 +2,7 @@
  * MCP tool definitions and dispatch for composing dashboards. These discover the
  * boat's live data (via an SkClient) and design dashboards from the templates.
  */
+import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { composeDashboard, previewAscii, type Dashboard } from './compose/dashboard-builder.js';
 import type { ResolveContext } from './compose/resolver.js';
@@ -9,56 +10,60 @@ import { getTemplate, TEMPLATES } from './compose/templates.js';
 import { discoverInventory } from './discovery/discover.js';
 import type { SkClient } from './discovery/sk-client.js';
 import type { KipDashboardSchema } from './schema/schema-types.js';
-import { ToolError, type ToolDefinition } from './tools.js';
+import { kipObject, READ_ONLY_LOCAL, READ_ONLY_REMOTE, type ToolSpec } from './tool-spec.js';
+import { ToolError } from './tools.js';
 
 const INTENT_IDS = TEMPLATES.map((t) => t.id);
+const droppedSchema = z.array(z.object({ selector: z.string(), reason: z.string() }));
 
-export const COMPOSE_TOOL_DEFINITIONS: ToolDefinition[] = [
+export const COMPOSE_TOOL_SPECS: ToolSpec[] = [
   {
     name: 'compose_dashboard',
+    title: 'Compose a dashboard',
     description:
       "Design one KIP dashboard for an intent by binding widgets to the boat's data. Returns the dashboard, an ASCII preview, and what was left out. Does not write anything.",
     inputSchema: {
-      type: 'object',
-      properties: {
-        intent: { type: 'string', enum: INTENT_IDS, description: 'Which dashboard to design.' },
-        name: { type: 'string', description: 'Override the dashboard name.' },
-        icon: { type: 'string', description: 'Override the dashboard icon.' },
-      },
-      required: ['intent'],
-      additionalProperties: false,
+      intent: z.enum(INTENT_IDS).describe('Which dashboard to design.'),
+      name: z.string().optional().describe('Override the dashboard name.'),
+      icon: z.string().optional().describe('Override the dashboard icon.'),
     },
+    outputSchema: {
+      dashboard: kipObject,
+      dropped: droppedSchema,
+      notes: z.array(z.string()),
+      preview: z.string(),
+    },
+    annotations: READ_ONLY_REMOTE,
   },
   {
     name: 'recommend_dashboard_set',
+    title: 'Recommend a dashboard set',
     description:
       "Recommend a set of KIP dashboards for this boat: the use-case dashboards its data supports, each with a preview. Does not write anything.",
     inputSchema: {
-      type: 'object',
-      properties: {
-        intents: {
-          type: 'array',
-          items: { type: 'string', enum: INTENT_IDS },
-          description: 'Limit to these intents (default: all that the boat supports).',
-        },
-      },
-      additionalProperties: false,
+      intents: z
+        .array(z.enum(INTENT_IDS))
+        .optional()
+        .describe('Limit to these intents (default: all that the boat supports).'),
     },
+    outputSchema: {
+      dashboards: z.array(kipObject),
+      unsupported: z.array(z.string()),
+    },
+    annotations: READ_ONLY_REMOTE,
   },
   {
     name: 'preview_dashboard',
+    title: 'Preview a dashboard',
     description: 'Render an ASCII preview of a dashboard object (as returned by compose_dashboard).',
-    inputSchema: {
-      type: 'object',
-      properties: { dashboard: { type: 'object' } },
-      required: ['dashboard'],
-      additionalProperties: false,
-    },
+    inputSchema: { dashboard: kipObject.describe('A KIP dashboard object.') },
+    outputSchema: { ascii: z.string() },
+    annotations: READ_ONLY_LOCAL,
   },
 ];
 
 export const COMPOSE_TOOL_NAMES: ReadonlySet<string> = new Set(
-  COMPOSE_TOOL_DEFINITIONS.map((t) => t.name),
+  COMPOSE_TOOL_SPECS.map((t) => t.name),
 );
 
 /** Runs a compose tool, discovering the boat's data as needed. */

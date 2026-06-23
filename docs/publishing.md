@@ -9,6 +9,14 @@ semantic-release exchanges the GitHub Actions OIDC token for a short-lived npm t
 `registry.npmjs.org`, then publishes with **provenance** automatically. (Confirmed in
 `@semantic-release/npm`'s `verify-auth.js` / `trusted-publishing/`.)
 
+A release **does not commit anything back to `main`** — it only publishes to npm, creates a
+GitHub Release, and pushes the version tag. This is deliberate: `main` is protected and only
+changes through pull requests, so an automated commit to it would be rejected
+(`GH013: Changes must be made through a pull request`). The `@semantic-release/changelog` and
+`@semantic-release/git` plugins are intentionally **not** used. The changelog lives on the
+**GitHub Releases** page (with the git tags); the repo's `package.json` keeps its
+`0.0.0-development` placeholder while the published npm package gets the real version.
+
 ## One-time setup on npmjs.com
 
 Trusted publishing is verified per package, so npm needs the package to exist with a

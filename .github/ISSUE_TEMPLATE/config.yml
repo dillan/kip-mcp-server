@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Setup help
+    url: https://github.com/dillan/kip-mcp-server/tree/main/docs/clients
+    about: Guides for connecting Claude, Codex, and Gemini to your boat.

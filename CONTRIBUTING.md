@@ -23,7 +23,9 @@ npm run lint:fix    # fix what can be fixed automatically
 npm test            # run the tests
 npm run test:coverage  # run the tests with coverage
 npm run build       # compile to dist/
+npm run dev         # compile and watch for changes
 npm run smoke       # start the built server and check it answers over MCP
+npm run inspect     # build, then open the MCP Inspector against the server
 npm run ci          # run the whole set: typecheck, lint, build, coverage, smoke
 ```
 

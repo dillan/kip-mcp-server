@@ -4,6 +4,7 @@ import { callComposeTool, COMPOSE_TOOL_SPECS } from './compose-tools.js';
 import { loadConfig } from './config.js';
 import { callDiscoveryTool, DISCOVERY_TOOL_SPECS } from './discovery-tools.js';
 import { SkClient } from './discovery/sk-client.js';
+import { PROMPT_SPECS } from './prompts.js';
 import { readResourceText } from './resources.js';
 import { loadKipSchema } from './schema/kip-schema.js';
 import type { KipDashboardSchema } from './schema/schema-types.js';
@@ -86,6 +87,7 @@ export class KipMCPServer {
     this.server = new McpServer({ name: SERVER_NAME, version: SERVER_VERSION });
     this.registerTools();
     this.registerResources();
+    this.registerPrompts();
   }
 
   private async getSchema(): Promise<KipDashboardSchema> {
@@ -151,6 +153,16 @@ export class KipMCPServer {
           const text = this.readResource(resource.uri, schema);
           return { contents: [{ uri: resource.uri, mimeType: resource.mimeType, text }] };
         },
+      );
+    }
+  }
+
+  private registerPrompts(): void {
+    for (const spec of PROMPT_SPECS) {
+      this.server.registerPrompt(
+        spec.name,
+        { title: spec.title, description: spec.description, argsSchema: spec.argsSchema },
+        (args) => spec.build(args as Record<string, string | undefined>),
       );
     }
   }

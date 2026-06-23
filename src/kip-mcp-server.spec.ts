@@ -134,3 +134,26 @@ describe('structured output across tool groups (the client validates each output
     await client.close();
   });
 });
+
+describe('guided prompts', () => {
+  it('lists the design and review prompts', async () => {
+    const client = await connectClient();
+    const { prompts } = await client.listPrompts();
+    expect(prompts.map((p) => p.name)).toEqual(
+      expect.arrayContaining(['design_dashboards', 'review_dashboard']),
+    );
+    await client.close();
+  });
+
+  it('builds the design_dashboards prompt and honours the focus argument', async () => {
+    const client = await connectClient();
+    const result = await client.getPrompt({
+      name: 'design_dashboards',
+      arguments: { focus: 'sailing' },
+    });
+    const text = (result.messages[0].content as { text: string }).text;
+    expect(text).toContain('analyze_signalk_data');
+    expect(text).toContain('sailing');
+    await client.close();
+  });
+});

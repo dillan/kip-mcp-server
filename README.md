@@ -52,10 +52,13 @@ The server reads a few settings from its environment:
 | `SIGNALK_PORT` | Your Signal K port | `3000` |
 | `SIGNALK_TLS` | Set to `true` if your server uses `https` | `false` |
 | `SIGNALK_TOKEN` | A Signal K login token, needed to **write** dashboards | (none) |
+| `SIGNALK_USER` | A Signal K username — used with `SIGNALK_PASSWORD` instead of a token | (none) |
+| `SIGNALK_PASSWORD` | The matching Signal K password | (none) |
 | `KIP_URL` | Override where KIP is served, if it's not the default | (derived) |
 
-Reading your data needs no token. Writing dashboards to the server needs a token; you
-can always use the file-export option instead, which needs nothing extra.
+Reading your data needs no login. Writing dashboards to the server needs either a token or
+a username and password; you can always use the file-export option instead, which needs
+nothing extra.
 
 ## What the assistant can do
 

@@ -7,6 +7,7 @@ import { SkClient } from './discovery/sk-client.js';
 import { readResourceText } from './resources.js';
 import { loadKipSchema } from './schema/kip-schema.js';
 import type { KipDashboardSchema } from './schema/schema-types.js';
+import { TokenProvider } from './signalk/auth.js';
 import { toToolResult, type ToolSpec } from './tool-spec.js';
 import { callTool, VOCAB_TOOL_SPECS } from './tools.js';
 import { callWriteTool, WRITE_TOOL_SPECS } from './write-tools.js';
@@ -71,9 +72,17 @@ export class KipMCPServer {
     const config = loadConfig();
     this.schema = options.schema;
     this.loadSchemaFn = options.loadSchema ?? (() => loadKipSchema({ baseUrl: config.kipBaseUrl }));
-    this.sk = options.sk ?? new SkClient({ baseUrl: config.signalkBaseUrl, token: config.token });
+    // One token source, shared by the read and write clients, so a username/
+    // password login happens at most once.
+    const tokens = new TokenProvider({
+      baseUrl: config.signalkBaseUrl,
+      token: config.token,
+      credentials: config.credentials,
+    });
+    const getToken = () => tokens.get();
+    this.sk = options.sk ?? new SkClient({ baseUrl: config.signalkBaseUrl, getToken });
     this.appData =
-      options.appData ?? new SkAppDataClient({ baseUrl: config.signalkBaseUrl, token: config.token });
+      options.appData ?? new SkAppDataClient({ baseUrl: config.signalkBaseUrl, getToken });
     this.server = new McpServer({ name: SERVER_NAME, version: SERVER_VERSION });
     this.registerTools();
     this.registerResources();

@@ -34,24 +34,77 @@ export interface Capabilities {
   hasAutopilot: boolean;
 }
 
-/** Flattens a `vessels/self` tree into a sorted path inventory. STUB. */
-export function flattenVesselData(_self: Record<string, unknown>): PathInfo[] {
-  return [];
+const RESERVED = new Set(['value', 'values', '$source', 'source', 'timestamp', 'meta', 'pgn', 'sentence']);
+
+function isLeaf(node: Record<string, unknown>): boolean {
+  return 'value' in node || 'values' in node || 'meta' in node;
 }
 
-/** Derives capability flags from a path inventory. STUB. */
-export function deriveCapabilities(_paths: PathInfo[]): Capabilities {
+function valueType(value: unknown): string {
+  if (value === null || value === undefined) return 'null';
+  if (Array.isArray(value)) return 'array';
+  return typeof value;
+}
+
+function toPathInfo(path: string, node: Record<string, unknown>): PathInfo {
+  const meta = (node.meta ?? {}) as Record<string, unknown>;
+  const value = 'value' in node ? node.value : null;
+  const values = node.values as Record<string, unknown> | undefined;
+  const zones = meta.zones;
   return {
-    hasPosition: false,
-    hasSpeed: false,
-    hasHeading: false,
-    hasWind: false,
-    hasDepth: false,
-    hasEnvironment: false,
-    hasElectrical: false,
-    batteryCount: 0,
-    hasEngine: false,
-    engineCount: 0,
-    hasAutopilot: false,
+    path,
+    skUnit: typeof meta.units === 'string' ? meta.units : null,
+    description: typeof meta.description === 'string' ? meta.description : null,
+    displayName: typeof meta.displayName === 'string' ? meta.displayName : null,
+    hasZones: Array.isArray(zones) && zones.length > 0,
+    pathType: valueType(value),
+    sampleValue: value ?? null,
+    sourceCount: values ? Object.keys(values).length : 1,
+  };
+}
+
+/** Flattens a `vessels/self` tree into a sorted path inventory. */
+export function flattenVesselData(self: Record<string, unknown>): PathInfo[] {
+  const out: PathInfo[] = [];
+
+  const walk = (node: Record<string, unknown>, prefix: string): void => {
+    for (const [key, child] of Object.entries(node)) {
+      if (RESERVED.has(key)) continue;
+      if (child === null || typeof child !== 'object') continue; // skip bare props like name/mmsi
+      const path = prefix ? `${prefix}.${key}` : key;
+      const obj = child as Record<string, unknown>;
+      if (isLeaf(obj)) {
+        out.push(toPathInfo(path, obj));
+      } else {
+        walk(obj, path);
+      }
+    }
+  };
+
+  walk(self, '');
+  return out.sort((a, b) => a.path.localeCompare(b.path));
+}
+
+/** Derives capability flags from a path inventory. */
+export function deriveCapabilities(paths: PathInfo[]): Capabilities {
+  const list = paths.map((p) => p.path);
+  const has = (prefix: string): boolean => list.some((p) => p === prefix || p.startsWith(prefix));
+  const instancesUnder = (prefix: string): number =>
+    new Set(
+      list.filter((p) => p.startsWith(prefix)).map((p) => p.slice(prefix.length).split('.')[0]),
+    ).size;
+
+  return {
+    hasPosition: list.includes('navigation.position'),
+    hasSpeed: list.includes('navigation.speedOverGround'),
+    hasHeading: has('navigation.heading'),
+    hasWind: has('environment.wind.'),
+    hasDepth: has('environment.depth.'),
+    hasEnvironment: has('environment.outside.'),
+    hasElectrical: has('electrical.'),
+    batteryCount: instancesUnder('electrical.batteries.'),
+    hasEngine: has('propulsion.'),
+    engineCount: instancesUnder('propulsion.'),
+    hasAutopilot: has('steering.autopilot.'),
   };
 }

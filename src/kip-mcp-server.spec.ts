@@ -52,3 +52,25 @@ describe('KipMCPServer over MCP (in-memory)', () => {
     await client.close();
   });
 });
+
+describe('world-class MCP surface (structured output + annotations)', () => {
+  it('exposes output schemas and read-only annotations on tools', async () => {
+    const client = await connectClient();
+    const { tools } = await client.listTools();
+    const widgets = tools.find((t) => t.name === 'list_kip_widgets');
+    expect(widgets?.annotations?.readOnlyHint).toBe(true);
+    expect(widgets?.outputSchema).toBeDefined();
+    await client.close();
+  });
+
+  it('returns machine-readable structuredContent alongside the JSON text', async () => {
+    const client = await connectClient();
+    const result = await client.callTool({ name: 'list_kip_widgets', arguments: {} });
+    const structured = result.structuredContent as { widgets?: unknown[] } | undefined;
+    expect(structured?.widgets?.length).toBeGreaterThanOrEqual(30);
+    // The text block stays for clients that do not read structured content.
+    const content = result.content as Array<{ type: string; text: string }>;
+    expect(JSON.parse(content[0].text)).toHaveProperty('widgets');
+    await client.close();
+  });
+});

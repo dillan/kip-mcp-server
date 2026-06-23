@@ -6,6 +6,7 @@ import {
   ListToolsRequestSchema,
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
+import { callComposeTool, COMPOSE_TOOL_DEFINITIONS, COMPOSE_TOOL_NAMES } from './compose-tools.js';
 import { loadConfig } from './config.js';
 import { callDiscoveryTool, DISCOVERY_TOOL_DEFINITIONS, DISCOVERY_TOOL_NAMES } from './discovery-tools.js';
 import { SkClient } from './discovery/sk-client.js';
@@ -89,16 +90,21 @@ export class KipMCPServer {
 
   private registerHandlers(): void {
     this.server.setRequestHandler(ListToolsRequestSchema, () => ({
-      tools: [...TOOL_DEFINITIONS, ...DISCOVERY_TOOL_DEFINITIONS],
+      tools: [...TOOL_DEFINITIONS, ...DISCOVERY_TOOL_DEFINITIONS, ...COMPOSE_TOOL_DEFINITIONS],
     }));
 
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name } = request.params;
       const args = request.params.arguments ?? {};
       try {
-        const result = DISCOVERY_TOOL_NAMES.has(name)
-          ? await callDiscoveryTool(this.sk, name, args)
-          : callTool(await this.getSchema(), name, args);
+        let result: unknown;
+        if (DISCOVERY_TOOL_NAMES.has(name)) {
+          result = await callDiscoveryTool(this.sk, name, args);
+        } else if (COMPOSE_TOOL_NAMES.has(name)) {
+          result = await callComposeTool(await this.getSchema(), this.sk, name, args);
+        } else {
+          result = callTool(await this.getSchema(), name, args);
+        }
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

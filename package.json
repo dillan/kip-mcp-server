@@ -17,6 +17,8 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch",
+    "inspect": "npm run build && npx @modelcontextprotocol/inspector node dist/index.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

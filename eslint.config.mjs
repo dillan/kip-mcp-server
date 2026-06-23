@@ -1,0 +1,24 @@
+import js from '@eslint/js';
+import tseslint from 'typescript-eslint';
+
+export default tseslint.config(
+  {
+    ignores: [
+      'dist/',
+      'coverage/',
+      'node_modules/',
+      '*.config.js',
+      '*.config.mjs',
+      '*.config.cjs',
+      '.husky/',
+    ],
+  },
+  {
+    files: ['src/**/*.ts', 'tests/**/*.ts'],
+    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    languageOptions: {
+      ecmaVersion: 2023,
+      sourceType: 'module',
+    },
+  },
+);

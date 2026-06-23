@@ -1,0 +1,75 @@
+{
+  "name": "kip-mcp-server",
+  "version": "0.0.0-development",
+  "description": "An MCP server that reads your boat's Signal K data and helps AI assistants design and install KIP dashboards.",
+  "type": "module",
+  "bin": {
+    "kip-mcp-server": "dist/index.js"
+  },
+  "files": [
+    "dist/",
+    "src/resources/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:unit": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
+    "ci": "npm run typecheck && npm run lint && npm run build && npm run test:coverage",
+    "prepare": "husky"
+  },
+  "keywords": [
+    "signalk",
+    "kip",
+    "mcp",
+    "marine",
+    "dashboard",
+    "model-context-protocol",
+    "claude",
+    "ai",
+    "boat",
+    "sailing"
+  ],
+  "license": "MIT",
+  "author": "Dillan Laughlin",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dillan/kip-mcp-server.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.1.0",
+    "@commitlint/config-conventional": "^21.1.0",
+    "@eslint/js": "^10.0.1",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@types/jest": "^30.0.0",
+    "@types/lodash": "^4.17.24",
+    "@types/node": "^26.0.0",
+    "eslint": "^10.5.0",
+    "husky": "^9.1.7",
+    "jest": "^30.4.2",
+    "semantic-release": "^25.0.5",
+    "ts-jest": "^29.4.11",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.62.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "dotenv": "^17.4.2",
+    "lodash": "^4.18.1",
+    "uuid": "^14.0.1",
+    "zod": "^4.4.3"
+  }
+}

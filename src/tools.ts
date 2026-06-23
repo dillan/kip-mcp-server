@@ -8,6 +8,7 @@ import { readResourceText } from './resources.js';
 import type { KipDashboardSchema } from './schema/schema-types.js';
 import { validateDashboard } from './validators.js';
 import { getDesignSystem, getUnitOptions, getWidgetSchema, listWidgets } from './vocabulary.js';
+import { buildKipConfig } from './write/config-builder.js';
 
 export class ToolError extends Error {
   override name = 'ToolError';
@@ -82,6 +83,21 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: 'export_kip_config',
+    description:
+      'Build a complete KipConfig.json from dashboards that a user can import via KIP Settings. Works on any Signal K server (no write to the server). Returns the file contents.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        dashboards: { type: 'array', items: { type: 'object' }, description: 'Dashboards to include.' },
+        theme: { type: 'string', description: "Theme name (default '')." },
+        units: { type: 'object', description: 'Unit-default overrides, e.g. { Speed: "kph" }.' },
+      },
+      required: ['dashboards'],
+      additionalProperties: false,
+    },
+  },
 ];
 
 /** Runs a tool by name and returns its structured result. Throws ToolError on bad input. */
@@ -117,6 +133,17 @@ export function callTool(
 
     case 'validate_kip_config':
       return validateDashboard(args.dashboard, schema);
+
+    case 'export_kip_config': {
+      const dashboards = Array.isArray(args.dashboards) ? args.dashboards : [];
+      const options: { theme?: string; units?: Record<string, string> } = {};
+      if (typeof args.theme === 'string') options.theme = args.theme;
+      if (args.units && typeof args.units === 'object') {
+        options.units = args.units as Record<string, string>;
+      }
+      const config = buildKipConfig(schema, dashboards, options);
+      return { filename: 'KipConfig.json', json: JSON.stringify(config, null, 2) };
+    }
 
     case 'get_unit_options': {
       const skUnit = typeof args.skUnit === 'string' ? args.skUnit : '';

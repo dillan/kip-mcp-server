@@ -18,7 +18,8 @@ export interface BuildConfigOptions {
 
 /**
  * Builds a complete KIP config from dashboards, always carrying a full `app`
- * block and stamping `app.configVersion` from the schema. STUB.
+ * block and stamping `app.configVersion` from the schema. When `baseConfig` is
+ * given, its existing `app` and `theme` are preserved.
  */
 export function buildKipConfig(
   schema: KipDashboardSchema,

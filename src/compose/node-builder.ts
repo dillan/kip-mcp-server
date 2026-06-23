@@ -1,5 +1,9 @@
-import { cloneDeep, merge } from 'lodash';
+import lodash from 'lodash';
 import type { WidgetSchemaEntry } from '../schema/schema-types.js';
+
+// lodash is CommonJS; Node ESM can't statically import its named exports, so we
+// default-import the namespace and destructure at runtime.
+const { cloneDeep, merge } = lodash;
 
 /** A Signal K path binding for one `paths-record` slot. */
 export interface SlotBinding {

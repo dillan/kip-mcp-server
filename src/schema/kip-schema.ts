@@ -28,14 +28,64 @@ export function loadBundledSchema(): KipDashboardSchema {
   return JSON.parse(readFileSync(resourcePath('bundled-schema.json'), 'utf8')) as KipDashboardSchema;
 }
 
+class AuthError extends Error {
+  override name = 'AuthError';
+}
+
 /**
- * Loads the KIP schema, preferring the live copy served by the running KIP and
- * falling back to the bundled copy when KIP is unreachable.
+ * Loads the KIP schema, preferring the live copy served by the running KIP at
+ * `<baseUrl>/assets/kip-dashboard-schema.json`.
  *
- * STUB: implemented in the GREEN step.
+ *  - 200            use the live schema (source `remote`).
+ *  - 404 / network  fall back to the bundled copy with a version-skew warning.
+ *  - 401 / 403      throw an actionable auth error (never a silent fallback,
+ *                   which would hide a real configuration problem).
  */
-export async function loadKipSchema(_opts: LoadOptions): Promise<LoadResult> {
-  throw new Error('not implemented');
+export async function loadKipSchema(opts: LoadOptions): Promise<LoadResult> {
+  const { baseUrl, fetchImpl = fetch, loadBundled = loadBundledSchema, timeoutMs = 5000 } = opts;
+  const url = new URL(SCHEMA_ASSET, ensureTrailingSlash(baseUrl)).toString();
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    let response: Response;
+    try {
+      response = await fetchImpl(url, { signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
+
+    if (response.status === 401 || response.status === 403) {
+      throw new AuthError(
+        `KIP returned HTTP ${response.status} when fetching its schema. The server needs a ` +
+          `valid token or login — set SIGNALK_TOKEN, or SIGNALK_USER and SIGNALK_PASSWORD.`,
+      );
+    }
+    if (!response.ok) {
+      return fallback(loadBundled, `KIP schema not found at ${url} (HTTP ${response.status}).`);
+    }
+    const schema = (await response.json()) as KipDashboardSchema;
+    return { schema, source: 'remote' };
+  } catch (error) {
+    if (error instanceof AuthError) throw error;
+    const reason = error instanceof Error ? error.message : String(error);
+    return fallback(loadBundled, `Could not reach KIP at ${url} (${reason}).`);
+  }
+}
+
+function fallback(loadBundled: () => KipDashboardSchema, why: string): LoadResult {
+  const schema = loadBundled();
+  return {
+    schema,
+    source: 'bundled',
+    warning:
+      `${why} Using the bundled schema generated for KIP ${schema.meta.kipVersion}, ` +
+      `which may differ from your installed KIP.`,
+  };
+}
+
+function ensureTrailingSlash(url: string): string {
+  return url.endsWith('/') ? url : `${url}/`;
 }
 
 export { SCHEMA_ASSET };

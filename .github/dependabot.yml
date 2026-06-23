@@ -1,0 +1,32 @@
+# Dependabot keeps npm dependencies and GitHub Actions up to date.
+#
+# About `npm audit`: the remaining advisories are all dev-only transitive deps —
+# the jest test chain (moderate), and `undici` (high) which is bundled inside the
+# `npm` package pulled in by @semantic-release/npm. None ship in the published
+# package or run at runtime. `npm audit fix` makes no safe change in range, and
+# `--force` is destructive (it downgrades jest 30 -> 25 and adds more vulns), so it
+# is intentionally not applied. The bundled `undici` cannot be updated from here
+# (it is vendored inside npm), so it is ignored below and resolved upstream.
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      dev-dependencies:
+        dependency-type: "development"
+      production-dependencies:
+        dependency-type: "production"
+    ignore:
+      - dependency-name: "undici"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      github-actions:
+        patterns:
+          - "*"

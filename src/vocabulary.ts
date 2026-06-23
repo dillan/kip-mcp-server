@@ -38,17 +38,38 @@ export interface UnitOptions {
   measures: UnitMeasure[];
 }
 
-/** Lists the widget catalog, optionally filtered. STUB. */
-export function listWidgets(_schema: KipDashboardSchema, _filter?: ListWidgetsFilter): WidgetSummary[] {
-  return [];
+/** Lists the widget catalog, optionally filtered by category or plugin needs. */
+export function listWidgets(
+  schema: KipDashboardSchema,
+  filter: ListWidgetsFilter = {},
+): WidgetSummary[] {
+  return schema.widgets
+    .filter((w) => !filter.category || w.category === filter.category)
+    .filter(
+      (w) =>
+        !filter.requiresNoPlugins || (w.requiredPlugins.length === 0 && !w.anyOfPlugins?.length),
+    )
+    .map((w) => ({
+      name: w.name,
+      selector: w.selector,
+      category: w.category,
+      description: w.description,
+      bindingKind: w.bindingKind,
+      minWidth: w.minWidth,
+      minHeight: w.minHeight,
+      defaultWidth: w.defaultWidth,
+      defaultHeight: w.defaultHeight,
+      requiredPlugins: w.requiredPlugins,
+      ...(w.anyOfPlugins ? { anyOfPlugins: w.anyOfPlugins } : {}),
+    }));
 }
 
-/** Returns the full schema entry for one widget selector. STUB. */
+/** Returns the full schema entry for one widget selector. */
 export function getWidgetSchema(
-  _schema: KipDashboardSchema,
-  _selector: string,
+  schema: KipDashboardSchema,
+  selector: string,
 ): WidgetSchemaEntry | undefined {
-  return undefined;
+  return schema.widgets.find((w) => w.selector === selector);
 }
 
 /** Returns KIP's design system (grid, colours, themes, icons, units). */
@@ -56,7 +77,11 @@ export function getDesignSystem(schema: KipDashboardSchema): DesignSystem {
   return schema.designSystem;
 }
 
-/** Returns the unit group and convertible measures for a Signal K base unit. STUB. */
-export function getUnitOptions(_schema: KipDashboardSchema, _skUnit: string): UnitOptions | null {
-  return null;
+/** Returns the unit group and convertible measures for a Signal K base unit. */
+export function getUnitOptions(schema: KipDashboardSchema, skUnit: string): UnitOptions | null {
+  const group = schema.designSystem.unitGroups.find((g) =>
+    g.measures.some((m) => m.measure === skUnit),
+  );
+  if (!group) return null;
+  return { group: group.group, skUnit, measures: group.measures };
 }

@@ -27,7 +27,7 @@ describe('listWidgets', () => {
 describe('getWidgetSchema', () => {
   it('returns the full entry with default config and path slots', () => {
     const numeric = getWidgetSchema(schema, 'widget-numeric');
-    expect(numeric?.defaultConfig).toBeTypeOf('object');
+    expect(typeof numeric?.defaultConfig).toBe('object');
     expect(numeric?.pathSlots.some((s) => s.slot === 'numericPath')).toBe(true);
   });
 

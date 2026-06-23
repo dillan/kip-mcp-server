@@ -22,14 +22,18 @@ jobs:
           node-version: '24'
           cache: npm
           registry-url: 'https://registry.npmjs.org'
+      # npm Trusted Publishing (OIDC) needs npm >= 11.5.1.
+      - run: npm install -g npm@latest
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run build
       - run: npm run test:coverage
+      # Publishes via npm Trusted Publishing (OIDC) — no NPM_TOKEN. semantic-release
+      # exchanges the GitHub Actions OIDC token (id-token: write) for a short-lived npm
+      # token and publishes with provenance automatically. This needs a Trusted Publisher
+      # configured on the npm package first — see docs/publishing.md.
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_CONFIG_PROVENANCE: 'true'
         run: npx semantic-release

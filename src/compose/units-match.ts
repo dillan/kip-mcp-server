@@ -14,12 +14,18 @@ export interface UnitChoiceOptions {
  * base unit itself (no conversion). When the base unit is in no known group we
  * can't convert, so the slot default (or the base unit) is passed through.
  *
- * STUB: implemented in the GREEN step.
  */
 export function chooseConvertUnit(
-  _design: DesignSystem,
-  _skUnit: string,
-  _options: UnitChoiceOptions = {},
+  design: DesignSystem,
+  skUnit: string,
+  options: UnitChoiceOptions = {},
 ): string {
-  return 'unitless';
+  const group = design.unitGroups.find((g) => g.measures.some((m) => m.measure === skUnit));
+  const inGroup = (unit: string | null | undefined): boolean =>
+    !!unit && !!group && group.measures.some((m) => m.measure === unit);
+
+  if (inGroup(options.preferred)) return options.preferred as string;
+  if (inGroup(options.slotDefault)) return options.slotDefault as string;
+  if (group) return skUnit;
+  return options.slotDefault ?? skUnit;
 }

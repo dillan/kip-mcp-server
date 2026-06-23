@@ -1,3 +1,4 @@
+import { cloneDeep, merge } from 'lodash';
 import type { WidgetSchemaEntry } from '../schema/schema-types.js';
 
 /** A Signal K path binding for one `paths-record` slot. */
@@ -39,8 +40,44 @@ export interface GridNode {
  * overrides) with bindings applied per binding kind, the GridStack selector fixed
  * to `widget-host2`, and node id === widgetProperties.uuid.
  *
- * STUB: implemented in the GREEN step.
  */
-export function buildWidgetNode(_input: BuildWidgetInput): GridNode {
-  throw new Error('not implemented');
+export function buildWidgetNode(input: BuildWidgetInput): GridNode {
+  const config = merge(
+    cloneDeep(input.widget.defaultConfig),
+    cloneDeep(input.configOverrides ?? {}),
+  ) as Record<string, unknown>;
+
+  if (input.widget.bindingKind === 'paths-record' && input.bindings) {
+    const paths = (
+      config.paths && typeof config.paths === 'object' ? config.paths : {}
+    ) as Record<string, Record<string, unknown>>;
+    for (const binding of input.bindings) {
+      const slot = (paths[binding.slot] ?? {}) as Record<string, unknown>;
+      slot.path = binding.path;
+      slot.source = binding.source ?? slot.source ?? 'default';
+      if (binding.convertUnitTo != null) slot.convertUnitTo = binding.convertUnitTo;
+      if (binding.pathSkUnitsFilter != null) slot.pathSkUnitsFilter = binding.pathSkUnitsFilter;
+      paths[binding.slot] = slot;
+    }
+    config.paths = paths;
+  }
+
+  if (input.widget.bindingKind === 'datachart' && input.dataChart) {
+    config.datachartPath = input.dataChart.path;
+    if (input.dataChart.source != null) config.datachartSource = input.dataChart.source;
+    if (input.dataChart.convertUnitTo != null) config.convertUnitTo = input.dataChart.convertUnitTo;
+  }
+
+  if (input.color) config.color = input.color;
+
+  const { x, y, w, h } = input.position;
+  return {
+    w,
+    h,
+    x,
+    y,
+    id: input.uuid,
+    selector: 'widget-host2',
+    input: { widgetProperties: { type: input.widget.selector, uuid: input.uuid, config } },
+  };
 }

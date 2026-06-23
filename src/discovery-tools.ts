@@ -6,7 +6,13 @@ import { z } from 'zod';
 import { discoverInventory } from './discovery/discover.js';
 import { flattenVesselData } from './discovery/inventory.js';
 import type { SkClient } from './discovery/sk-client.js';
-import { kipObject, READ_ONLY_REMOTE, type ToolSpec } from './tool-spec.js';
+import {
+  kipObject,
+  makeProgressReporter,
+  READ_ONLY_REMOTE,
+  type ToolCtx,
+  type ToolSpec,
+} from './tool-spec.js';
 import { ToolError } from './tools.js';
 
 export const DISCOVERY_TOOL_SPECS: ToolSpec[] = [
@@ -70,10 +76,14 @@ export async function callDiscoveryTool(
   sk: SkClient,
   name: string,
   args: Record<string, unknown> = {},
+  ctx?: ToolCtx,
 ): Promise<unknown> {
   switch (name) {
     case 'analyze_signalk_data': {
+      const report = makeProgressReporter(ctx);
+      await report(0, 2, 'Fetching Signal K data');
       const result = await discoverInventory(sk);
+      await report(2, 2, 'Analysis complete');
       return {
         server: result.server,
         capabilities: result.capabilities,

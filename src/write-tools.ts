@@ -5,7 +5,14 @@
 import { z } from 'zod';
 import type { SkClient } from './discovery/sk-client.js';
 import type { KipDashboardSchema } from './schema/schema-types.js';
-import { kipObject, READ_ONLY_REMOTE, WRITE_REMOTE, type ToolSpec } from './tool-spec.js';
+import {
+  kipObject,
+  makeProgressReporter,
+  READ_ONLY_REMOTE,
+  WRITE_REMOTE,
+  type ToolCtx,
+  type ToolSpec,
+} from './tool-spec.js';
 import { ToolError } from './tools.js';
 import type { SkAppDataClient } from './write/appdata-client.js';
 import { buildApplyPlan, supportsApplicationData, type ApplyMode } from './write/apply-plan.js';
@@ -84,6 +91,7 @@ export async function callWriteTool(
   sk: SkClient,
   name: string,
   args: Record<string, unknown> = {},
+  ctx?: ToolCtx,
 ): Promise<unknown> {
   const scope = typeof args.scope === 'string' ? args.scope : 'user';
   const configName = typeof args.configName === 'string' ? args.configName : 'default';
@@ -125,16 +133,33 @@ export async function callWriteTool(
         return { ok: false, errors: plan.errors, warnings: plan.warnings };
       }
       const summaries = plan.requests.map((r) => r.summary);
+      const dryRunPayload = {
+        dryRun: true,
+        wouldWrite: summaries,
+        warnings: plan.warnings,
+        note: 'Re-run with dryRun:false and confirm:true to write.',
+      };
 
-      if (dryRun || !confirm) {
-        return {
-          dryRun: true,
-          wouldWrite: summaries,
-          warnings: plan.warnings,
-          note: 'Re-run with dryRun:false and confirm:true to write.',
-        };
+      const report = makeProgressReporter(ctx);
+      await report(0, 3, 'Validating apply plan');
+      if (dryRun) {
+        await report(3, 3, 'Dry run complete');
+        return dryRunPayload;
       }
 
+      // Not an explicit dry run: confirm the write. If the model already passed
+      // confirm:true we trust it; otherwise, when the client supports it, ask the
+      // user interactively. Clients that cannot elicit safely fall back to a dry run.
+      let confirmed = confirm;
+      if (!confirmed && ctx?.server.getClientCapabilities()?.elicitation?.form) {
+        confirmed = await confirmViaElicitation(ctx, scope, configName, summaries, plan.warnings);
+      }
+      if (!confirmed) {
+        await report(3, 3, 'Dry run complete');
+        return dryRunPayload;
+      }
+
+      await report(2, 3, 'Writing dashboards');
       for (const req of plan.requests) {
         if (req.kind === 'post-full') {
           await appData.postFull(scope, configName, fileVersion, req.body);
@@ -142,10 +167,50 @@ export async function callWriteTool(
           await appData.patchDashboards(scope, configName, fileVersion, req.body);
         }
       }
+      await report(3, 3, 'Apply complete');
       return { applied: true, wrote: summaries, warnings: plan.warnings };
     }
 
     default:
       throw new ToolError(`Unknown write tool "${name}".`);
+  }
+}
+
+/** Asks the user to confirm a write via MCP elicitation. Returns false on decline, cancel or error. */
+async function confirmViaElicitation(
+  ctx: ToolCtx,
+  scope: string,
+  configName: string,
+  summaries: string[],
+  warnings: string[],
+): Promise<boolean> {
+  const summaryText = summaries.map((s, i) => `${i + 1}. ${s}`).join('\n');
+  const warningText = warnings.length
+    ? `\n\nWarnings:\n${warnings.map((w) => `- ${w}`).join('\n')}`
+    : '';
+  try {
+    const result = await ctx.server.elicitInput(
+      {
+        message:
+          `Apply ${summaries.length} change(s) to KIP config "${configName}" (${scope})?\n\n` +
+          `${summaryText}${warningText}`,
+        requestedSchema: {
+          type: 'object',
+          properties: {
+            confirm: {
+              type: 'boolean',
+              title: 'Write these changes now?',
+              description: 'Yes writes to the Signal K server. No keeps it a dry run.',
+            },
+          },
+          required: ['confirm'],
+        },
+      },
+      { signal: ctx.extra.signal },
+    );
+    return result.action === 'accept' && result.content?.confirm === true;
+  } catch {
+    // The client declared elicitation but could not complete it; treat as not confirmed.
+    return false;
   }
 }

@@ -266,6 +266,39 @@ describe('elicitation for apply_kip_config', () => {
     expect(methods).not.toContain('POST');
     await connected.close();
   });
+
+  it('stays a dry run when the user accepts the form but answers no', async () => {
+    const methods: string[] = [];
+    const appData = new SkAppDataClient({ baseUrl: 'http://boat:3000', fetchImpl: recordingAppFetch(methods) });
+    const { client } = elicitingClient({ action: 'accept', content: { confirm: false } });
+    const connected = await connectWith({ sk: skVersion('2.13.0'), appData }, client);
+    const result = await connected.callTool({
+      name: 'apply_kip_config',
+      arguments: { dashboards: [sampleDashboard], dryRun: false },
+    });
+    expect((result.structuredContent as { dryRun?: boolean }).dryRun).toBe(true);
+    expect(methods).not.toContain('POST');
+    await connected.close();
+  });
+
+  it('degrades to a dry run (no error) when elicitation fails on the client', async () => {
+    const methods: string[] = [];
+    const appData = new SkAppDataClient({ baseUrl: 'http://boat:3000', fetchImpl: recordingAppFetch(methods) });
+    // Declares form support but registers no elicitation handler, so the request rejects.
+    const client = new Client(
+      { name: 'broken-elicit-client', version: '0.0.0' },
+      { capabilities: { elicitation: { form: {} } } },
+    );
+    const connected = await connectWith({ sk: skVersion('2.13.0'), appData }, client);
+    const result = await connected.callTool({
+      name: 'apply_kip_config',
+      arguments: { dashboards: [sampleDashboard], dryRun: false },
+    });
+    expect((result.structuredContent as { dryRun?: boolean }).dryRun).toBe(true);
+    expect(result.isError).toBeFalsy();
+    expect(methods).not.toContain('POST');
+    await connected.close();
+  });
 });
 
 describe('progress notifications', () => {
@@ -298,6 +331,33 @@ describe('progress notifications', () => {
       onprogress: (p) => events.push(p),
     });
     expect(lastIsComplete(events)).toBe(true);
+    await connected.close();
+  });
+
+  it('recommend_dashboard_set reports progress', async () => {
+    const connected = await connectWith({ sk: skVersion('2.13.0') });
+    const events: Array<{ progress: number; total?: number }> = [];
+    await connected.callTool({ name: 'recommend_dashboard_set', arguments: {} }, undefined, {
+      onprogress: (p) => events.push(p),
+    });
+    expect(lastIsComplete(events)).toBe(true);
+    await connected.close();
+  });
+
+  it('reports the apply write-path sequence 0 -> 2 -> 3 when it actually writes', async () => {
+    const methods: string[] = [];
+    const appData = new SkAppDataClient({ baseUrl: 'http://boat:3000', fetchImpl: recordingAppFetch(methods) });
+    const connected = await connectWith({ sk: skVersion('2.13.0'), appData });
+    const events: Array<{ progress: number; total?: number }> = [];
+    // confirm:true skips elicitation and takes the write branch.
+    await connected.callTool(
+      { name: 'apply_kip_config', arguments: { dashboards: [sampleDashboard], dryRun: false, confirm: true } },
+      undefined,
+      { onprogress: (p) => events.push(p) },
+    );
+    expect(events.map((e) => e.progress)).toEqual([0, 2, 3]);
+    expect(events.every((e) => e.total === 3)).toBe(true);
+    expect(methods).toContain('POST');
     await connected.close();
   });
 

@@ -1,17 +1,34 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import {
+  ElicitRequestSchema,
+  LoggingMessageNotificationSchema,
+} from '@modelcontextprotocol/sdk/types.js';
 import { SkClient } from './discovery/sk-client.js';
 import { KipMCPServer, type KipMCPServerOptions } from './kip-mcp-server.js';
 import { loadBundledSchema } from './schema/kip-schema.js';
 import { SkAppDataClient } from './write/appdata-client.js';
 
-async function connectWith(options: Omit<KipMCPServerOptions, 'schema'> = {}): Promise<Client> {
+async function connectWith(
+  options: KipMCPServerOptions = {},
+  client: Client = new Client({ name: 'test-client', version: '0.0.0' }),
+): Promise<Client> {
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   const server = new KipMCPServer({ schema: loadBundledSchema(), ...options });
-  const client = new Client({ name: 'test-client', version: '0.0.0' });
   await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
   return client;
 }
+
+/** A fake applicationData fetch: GET (read existing) -> 404; POST/PATCH -> 200. Records methods. */
+const recordingAppFetch = (methods: string[]): typeof fetch =>
+  (async (_url: unknown, init?: { method?: string }) => {
+    const method = init?.method ?? 'GET';
+    methods.push(method);
+    return new Response(JSON.stringify(null), { status: method === 'GET' ? 404 : 200 });
+  }) as unknown as typeof fetch;
+
+const skVersion = (version: string): SkClient =>
+  new SkClient({ baseUrl: 'http://boat:3000', fetchImpl: jsonFetch({ server: { version } }) });
 
 const connectClient = (): Promise<Client> => connectWith();
 
@@ -155,5 +172,143 @@ describe('guided prompts', () => {
     expect(text).toContain('analyze_signalk_data');
     expect(text).toContain('sailing');
     await client.close();
+  });
+});
+
+describe('logging', () => {
+  it('advertises the logging capability and sends the schema-fallback warning', async () => {
+    const logs: Array<{ level: string; logger?: string; data: unknown }> = [];
+    const client = new Client({ name: 'log-client', version: '0.0.0' });
+    client.setNotificationHandler(LoggingMessageNotificationSchema, (n) => {
+      logs.push(n.params);
+    });
+    const connected = await connectWith(
+      {
+        schema: undefined,
+        loadSchema: async () => ({
+          schema: loadBundledSchema(),
+          source: 'bundled' as const,
+          warning: 'Using the bundled schema generated for KIP 4.8.0',
+        }),
+      },
+      client,
+    );
+    expect(connected.getServerCapabilities()?.logging).toBeDefined();
+    await connected.callTool({ name: 'list_kip_widgets', arguments: {} });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(logs.some((l) => l.level === 'warning' && String(l.data).includes('bundled'))).toBe(true);
+    await connected.close();
+  });
+});
+
+describe('elicitation for apply_kip_config', () => {
+  function elicitingClient(reply: {
+    action: 'accept' | 'decline' | 'cancel';
+    content?: Record<string, unknown>;
+  }): {
+    client: Client;
+    seen: { requestedSchema?: Record<string, unknown>; message?: string };
+  } {
+    const seen: { requestedSchema?: Record<string, unknown>; message?: string } = {};
+    const client = new Client(
+      { name: 'elicit-client', version: '0.0.0' },
+      { capabilities: { elicitation: { form: {} } } },
+    );
+    client.setRequestHandler(ElicitRequestSchema, (req) => {
+      if ('requestedSchema' in req.params) {
+        seen.requestedSchema = req.params.requestedSchema as Record<string, unknown>;
+      }
+      seen.message = req.params.message;
+      return reply;
+    });
+    return { client, seen };
+  }
+
+  it('writes when the user accepts the confirmation', async () => {
+    const methods: string[] = [];
+    const appData = new SkAppDataClient({ baseUrl: 'http://boat:3000', fetchImpl: recordingAppFetch(methods) });
+    const { client, seen } = elicitingClient({ action: 'accept', content: { confirm: true } });
+    const connected = await connectWith({ sk: skVersion('2.13.0'), appData }, client);
+    const result = await connected.callTool({
+      name: 'apply_kip_config',
+      arguments: { dashboards: [sampleDashboard], dryRun: false },
+    });
+    expect((result.structuredContent as { applied?: boolean }).applied).toBe(true);
+    const props = seen.requestedSchema?.properties as { confirm?: { type?: string } } | undefined;
+    expect(props?.confirm?.type).toBe('boolean');
+    expect(methods).toContain('POST');
+    await connected.close();
+  });
+
+  it('stays a dry run when the user declines', async () => {
+    const methods: string[] = [];
+    const appData = new SkAppDataClient({ baseUrl: 'http://boat:3000', fetchImpl: recordingAppFetch(methods) });
+    const { client } = elicitingClient({ action: 'decline' });
+    const connected = await connectWith({ sk: skVersion('2.13.0'), appData }, client);
+    const result = await connected.callTool({
+      name: 'apply_kip_config',
+      arguments: { dashboards: [sampleDashboard], dryRun: false },
+    });
+    expect((result.structuredContent as { dryRun?: boolean }).dryRun).toBe(true);
+    expect(methods).not.toContain('POST');
+    await connected.close();
+  });
+
+  it('falls back to a dry run (no throw) when the client cannot elicit', async () => {
+    const methods: string[] = [];
+    const appData = new SkAppDataClient({ baseUrl: 'http://boat:3000', fetchImpl: recordingAppFetch(methods) });
+    const connected = await connectWith({ sk: skVersion('2.13.0'), appData });
+    const result = await connected.callTool({
+      name: 'apply_kip_config',
+      arguments: { dashboards: [sampleDashboard], dryRun: false },
+    });
+    expect((result.structuredContent as { dryRun?: boolean }).dryRun).toBe(true);
+    expect(methods).not.toContain('POST');
+    await connected.close();
+  });
+});
+
+describe('progress notifications', () => {
+  const lastIsComplete = (events: Array<{ progress: number; total?: number }>): boolean => {
+    const last = events[events.length - 1];
+    return events.length >= 2 && events[0].progress === 0 && last.progress === last.total;
+  };
+
+  it('apply_kip_config reports progress when a progressToken is supplied', async () => {
+    const appData = new SkAppDataClient({ baseUrl: 'http://boat:3000', fetchImpl: recordingAppFetch([]) });
+    const connected = await connectWith({ sk: skVersion('2.13.0'), appData });
+    const events: Array<{ progress: number; total?: number }> = [];
+    await connected.callTool(
+      { name: 'apply_kip_config', arguments: { dashboards: [sampleDashboard] } },
+      undefined,
+      { onprogress: (p) => events.push(p) },
+    );
+    expect(lastIsComplete(events)).toBe(true);
+    await connected.close();
+  });
+
+  it('analyze_signalk_data reports progress', async () => {
+    const sk = new SkClient({
+      baseUrl: 'http://boat:3000',
+      fetchImpl: jsonFetch({ server: { version: '2.13.0' }, self: {}, vessels: {} }),
+    });
+    const connected = await connectWith({ sk });
+    const events: Array<{ progress: number; total?: number }> = [];
+    await connected.callTool({ name: 'analyze_signalk_data', arguments: {} }, undefined, {
+      onprogress: (p) => events.push(p),
+    });
+    expect(lastIsComplete(events)).toBe(true);
+    await connected.close();
+  });
+
+  it('emits no progress and does not error when no progressToken is supplied', async () => {
+    const appData = new SkAppDataClient({ baseUrl: 'http://boat:3000', fetchImpl: recordingAppFetch([]) });
+    const connected = await connectWith({ sk: skVersion('2.13.0'), appData });
+    const result = await connected.callTool({
+      name: 'apply_kip_config',
+      arguments: { dashboards: [sampleDashboard] },
+    });
+    expect((result.structuredContent as { dryRun?: boolean }).dryRun).toBe(true);
+    await connected.close();
   });
 });

@@ -1,10 +1,18 @@
 #!/usr/bin/env node
 /**
  * kip-mcp-server entry point (stdio transport).
- *
- * The full MCP server is wired up in a later phase. For now this is a stub so the
- * package builds and the `kip-mcp-server` bin is linkable.
  */
-import { serverName } from './health.js';
+import * as dotenv from 'dotenv';
+import { KipMCPServer } from './kip-mcp-server.js';
 
-console.error(`${serverName()} starting (bootstrap build)`);
+dotenv.config();
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[kip-mcp-server] Unhandled rejection:', reason);
+});
+
+const server = new KipMCPServer();
+server.run().catch((error: unknown) => {
+  console.error('[kip-mcp-server] Failed to start:', error);
+  process.exit(1);
+});

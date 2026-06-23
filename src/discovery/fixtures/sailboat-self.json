@@ -1,0 +1,82 @@
+{
+  "navigation": {
+    "position": {
+      "value": { "longitude": -10.0, "latitude": 50.0 },
+      "$source": "gps.0",
+      "timestamp": "2026-01-01T00:00:00.000Z",
+      "meta": { "description": "The position of the vessel" }
+    },
+    "speedOverGround": {
+      "value": 3.2,
+      "$source": "gps.0",
+      "values": {
+        "gps.0": { "value": 3.2, "timestamp": "2026-01-01T00:00:00.000Z" },
+        "gps.1": { "value": 3.1, "timestamp": "2026-01-01T00:00:00.000Z" }
+      },
+      "meta": { "units": "m/s", "description": "Vessel speed over ground" }
+    },
+    "courseOverGroundTrue": {
+      "value": 1.57,
+      "$source": "gps.0",
+      "meta": { "units": "rad" }
+    },
+    "headingTrue": {
+      "value": 1.6,
+      "$source": "imu.0",
+      "meta": { "units": "rad", "displayName": "Heading (True)" }
+    },
+    "headingMagnetic": {
+      "value": 1.55,
+      "$source": "imu.0",
+      "meta": { "units": "rad" }
+    }
+  },
+  "environment": {
+    "wind": {
+      "angleApparent": { "value": 0.5, "$source": "wind.0", "meta": { "units": "rad" } },
+      "speedApparent": { "value": 6.0, "$source": "wind.0", "meta": { "units": "m/s" } },
+      "speedTrue": { "value": 5.0, "$source": "derived", "meta": { "units": "m/s" } },
+      "angleTrueWater": { "value": 0.8, "$source": "derived", "meta": { "units": "rad" } }
+    },
+    "depth": {
+      "belowTransducer": {
+        "value": 12.3,
+        "$source": "dst.0",
+        "meta": {
+          "units": "m",
+          "description": "Depth below transducer",
+          "zones": [{ "lower": 0, "upper": 2, "state": "alarm" }]
+        }
+      }
+    },
+    "outside": {
+      "temperature": { "value": 290.5, "$source": "env.0", "meta": { "units": "K" } },
+      "pressure": { "value": 101300, "$source": "env.0", "meta": { "units": "Pa" } }
+    }
+  },
+  "electrical": {
+    "batteries": {
+      "house": {
+        "voltage": { "value": 12.6, "$source": "bmv.0", "meta": { "units": "V" } },
+        "current": { "value": -5.2, "$source": "bmv.0", "meta": { "units": "A" } },
+        "stateOfCharge": { "value": 0.85, "$source": "bmv.0", "meta": { "units": "ratio" } }
+      },
+      "start": {
+        "voltage": { "value": 13.1, "$source": "bmv.1", "meta": { "units": "V" } }
+      }
+    }
+  },
+  "propulsion": {
+    "main": {
+      "revolutions": { "value": 0, "$source": "engine.0", "meta": { "units": "Hz" } },
+      "temperature": { "value": 320, "$source": "engine.0", "meta": { "units": "K" } }
+    }
+  },
+  "steering": {
+    "autopilot": {
+      "state": { "value": "standby", "$source": "ap.0" }
+    }
+  },
+  "name": "Test Vessel",
+  "mmsi": "000000000"
+}

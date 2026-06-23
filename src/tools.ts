@@ -6,6 +6,7 @@
  */
 import { readResourceText } from './resources.js';
 import type { KipDashboardSchema } from './schema/schema-types.js';
+import { validateDashboard } from './validators.js';
 import { getDesignSystem, getUnitOptions, getWidgetSchema, listWidgets } from './vocabulary.js';
 
 export class ToolError extends Error {
@@ -70,6 +71,17 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: 'validate_kip_config',
+    description:
+      'Validate a KIP dashboard object: structure, the widget-host2 invariants (id===uuid, known widget types), grid bounds, overlaps, and colour/icon/unit sanity. Returns errors and warnings.',
+    inputSchema: {
+      type: 'object',
+      properties: { dashboard: { type: 'object', description: 'A KIP dashboard object.' } },
+      required: ['dashboard'],
+      additionalProperties: false,
+    },
+  },
 ];
 
 /** Runs a tool by name and returns its structured result. Throws ToolError on bad input. */
@@ -102,6 +114,9 @@ export function callTool(
 
     case 'get_design_system':
       return getDesignSystem(schema);
+
+    case 'validate_kip_config':
+      return validateDashboard(args.dashboard, schema);
 
     case 'get_unit_options': {
       const skUnit = typeof args.skUnit === 'string' ? args.skUnit : '';

@@ -83,7 +83,8 @@ export function validateAgainstSignalk(
     }
 
     for (const plugin of widget.requiredPlugins) {
-      if (!installed.has(plugin)) pluginIssues.push({ where, widgetType: type, plugin, state: 'missing' });
+      if (!installed.has(plugin))
+        pluginIssues.push({ where, widgetType: type, plugin, state: 'missing' });
       else if (!enabled.has(plugin))
         pluginIssues.push({ where, widgetType: type, plugin, state: 'disabled' });
     }
@@ -97,7 +98,9 @@ export function validateAgainstSignalk(
       checkedPaths += 1;
       const label = `${where}.${binding.slot ?? 'path'}`;
       if (!binding.rawPath.startsWith('self.')) {
-        warnings.push(`${label}: "${binding.rawPath}" is not a self path; checking it as "${binding.barePath}".`);
+        warnings.push(
+          `${label}: "${binding.rawPath}" is not a self path; checking it as "${binding.barePath}".`,
+        );
       }
       const live = byPath.get(binding.barePath);
       if (!live) {
@@ -150,7 +153,8 @@ function extractBindings(widget: WidgetSchemaEntry, configRaw: unknown): Binding
     }
   } else if (widget.bindingKind === 'datachart') {
     const rawPath = typeof config.datachartPath === 'string' ? config.datachartPath : null;
-    if (rawPath) out.push({ slot: null, rawPath, barePath: stripSelf(rawPath), declaredSkUnit: null });
+    if (rawPath)
+      out.push({ slot: null, rawPath, barePath: stripSelf(rawPath), declaredSkUnit: null });
   }
 
   return out;

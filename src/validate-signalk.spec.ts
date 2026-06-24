@@ -114,7 +114,11 @@ describe('validateAgainstSignalk', () => {
     );
     expect(result.ok).toBe(false);
     expect(result.unitMismatches).toEqual([
-      expect.objectContaining({ path: 'self.navigation.speedOverGround', declared: 'K', live: 'm/s' }),
+      expect.objectContaining({
+        path: 'self.navigation.speedOverGround',
+        declared: 'K',
+        live: 'm/s',
+      }),
     ]);
   });
 
@@ -161,7 +165,9 @@ describe('validateAgainstSignalk', () => {
     });
     const result = validateAgainstSignalk(schema, dashboard(node), discovery());
     expect(result.checkedPaths).toBe(1);
-    expect(result.missingPaths.map((m) => m.path)).toContain('self.environment.outside.temperature');
+    expect(result.missingPaths.map((m) => m.path)).toContain(
+      'self.environment.outside.temperature',
+    );
   });
 
   it("warns when none of a widget's optional (anyOf) plugins are enabled", () => {

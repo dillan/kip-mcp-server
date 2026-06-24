@@ -2,7 +2,13 @@ import { loadBundledSchema } from '../schema/kip-schema.js';
 import { buildKipConfig, validateConfigForWrite, type KipConfig } from './config-builder.js';
 
 const schema = loadBundledSchema();
-const dash = { id: 'd1', name: 'X', icon: 'dashboard-dashboard', collapseSplitShell: false, configuration: [] };
+const dash = {
+  id: 'd1',
+  name: 'X',
+  icon: 'dashboard-dashboard',
+  collapseSplitShell: false,
+  configuration: [],
+};
 
 describe('buildKipConfig', () => {
   it('builds a complete config stamped with the schema config version', () => {
@@ -16,14 +22,23 @@ describe('buildKipConfig', () => {
   });
 
   it('applies a theme and unit overrides', () => {
-    const config = buildKipConfig(schema, [dash], { theme: 'light-theme', units: { Speed: 'kph' } });
+    const config = buildKipConfig(schema, [dash], {
+      theme: 'light-theme',
+      units: { Speed: 'kph' },
+    });
     expect(config.theme.themeName).toBe('light-theme');
     expect((config.app.unitDefaults as Record<string, string>).Speed).toBe('kph');
   });
 
   it('preserves a base config app/theme but forces the config version', () => {
     const base: KipConfig = {
-      app: { configVersion: 99, foo: 'bar', dataSets: [], unitDefaults: { Speed: 'mph' }, notificationConfig: {} },
+      app: {
+        configVersion: 99,
+        foo: 'bar',
+        dataSets: [],
+        unitDefaults: { Speed: 'mph' },
+        notificationConfig: {},
+      },
       theme: { themeName: 'night-theme' },
       dashboards: [],
     };

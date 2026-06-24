@@ -24,7 +24,9 @@ const base = 'http://boat.local/@mxtommy/kip/';
 
 describe('loadKipSchema', () => {
   it('uses the live schema served by KIP when available', async () => {
-    const fetchImpl = asFetch(async () => new Response(JSON.stringify(sampleRemote), { status: 200 }));
+    const fetchImpl = asFetch(
+      async () => new Response(JSON.stringify(sampleRemote), { status: 200 }),
+    );
     const result = await loadKipSchema({ baseUrl: base, fetchImpl, loadBundled: () => bundled });
     expect(result.source).toBe('remote');
     expect(result.schema.meta.kipVersion).toBe('9.9.9');

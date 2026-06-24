@@ -36,13 +36,18 @@ try {
   await client.close();
 
   // The --doctor CLI runs diagnostics and exits without starting the stdio server.
-  const doctor = spawnSync('node', ['dist/index.js', '--doctor'], { encoding: 'utf8', timeout: 30000 });
+  const doctor = spawnSync('node', ['dist/index.js', '--doctor'], {
+    encoding: 'utf8',
+    timeout: 30000,
+  });
   const doctorOut = `${doctor.stdout ?? ''}${doctor.stderr ?? ''}`;
   if (!doctorOut.includes('Signal K server reachable')) {
     throw new Error(`--doctor did not print the connection checks. Output:\n${doctorOut}`);
   }
 
-  console.log(`SMOKE OK — ${names.length} tools, ${prompts.length} prompts, --doctor runs: ${names.join(', ')}`);
+  console.log(
+    `SMOKE OK — ${names.length} tools, ${prompts.length} prompts, --doctor runs: ${names.join(', ')}`,
+  );
   process.exit(0);
 } catch (error) {
   console.error('SMOKE FAILED:', error);

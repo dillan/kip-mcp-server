@@ -6,9 +6,20 @@ import { SkAppDataClient } from './write/appdata-client.js';
 import type { KipConfig } from './write/config-builder.js';
 
 const schema = loadBundledSchema();
-const dash = { id: 'd1', name: 'X', icon: 'dashboard-dashboard', collapseSplitShell: false, configuration: [] };
+const dash = {
+  id: 'd1',
+  name: 'X',
+  icon: 'dashboard-dashboard',
+  collapseSplitShell: false,
+  configuration: [],
+};
 const existingConfig: KipConfig = {
-  app: { configVersion: 12, dataSets: [], unitDefaults: { Speed: 'knots' }, notificationConfig: {} },
+  app: {
+    configVersion: 12,
+    dataSets: [],
+    unitDefaults: { Speed: 'knots' },
+    notificationConfig: {},
+  },
   theme: { themeName: 'night-theme' },
   dashboards: [{ id: 'old' }],
 };
@@ -23,19 +34,37 @@ describe('supportsApplicationData', () => {
 
 describe('buildApplyPlan', () => {
   it('seeds a full POST when no config exists', () => {
-    const plan = buildApplyPlan({ schema, dashboards: [dash], existing: null, configName: 'default', mode: 'append-dashboards' });
+    const plan = buildApplyPlan({
+      schema,
+      dashboards: [dash],
+      existing: null,
+      configName: 'default',
+      mode: 'append-dashboards',
+    });
     expect(plan.requests[0].kind).toBe('post-full');
     expect(plan.errors).toEqual([]);
   });
 
   it('patches the merged dashboards when a config exists', () => {
-    const plan = buildApplyPlan({ schema, dashboards: [dash], existing: existingConfig, configName: 'default', mode: 'append-dashboards' });
+    const plan = buildApplyPlan({
+      schema,
+      dashboards: [dash],
+      existing: existingConfig,
+      configName: 'default',
+      mode: 'append-dashboards',
+    });
     expect(plan.requests[0].kind).toBe('patch-dashboards');
     expect((plan.requests[0].body as unknown[]).length).toBe(2);
   });
 
   it('full-replace posts a full config keeping the existing theme', () => {
-    const plan = buildApplyPlan({ schema, dashboards: [dash], existing: existingConfig, configName: 'default', mode: 'full-replace' });
+    const plan = buildApplyPlan({
+      schema,
+      dashboards: [dash],
+      existing: existingConfig,
+      configName: 'default',
+      mode: 'full-replace',
+    });
     expect(plan.requests[0].kind).toBe('post-full');
     expect((plan.requests[0].body as KipConfig).theme.themeName).toBe('night-theme');
   });
@@ -60,7 +89,9 @@ function makeAppData(routes: Record<string, unknown>, captured: Captured[]): SkA
 
 const skWithVersion = (version: string): SkClient => {
   const fetchImpl = (async () =>
-    new Response(JSON.stringify({ server: { version } }), { status: 200 })) as unknown as typeof fetch;
+    new Response(JSON.stringify({ server: { version } }), {
+      status: 200,
+    })) as unknown as typeof fetch;
   return new SkClient({ baseUrl: 'http://boat:3000', fetchImpl });
 };
 
@@ -68,9 +99,15 @@ describe('callWriteTool apply_kip_config', () => {
   it('dry-runs by default and writes nothing', async () => {
     const captured: Captured[] = [];
     const appData = makeAppData({ '/user/kip/11': existingConfig }, captured);
-    const result = (await callWriteTool(schema, appData, skWithVersion('2.13.0'), 'apply_kip_config', {
-      dashboards: [dash],
-    })) as { dryRun: boolean };
+    const result = (await callWriteTool(
+      schema,
+      appData,
+      skWithVersion('2.13.0'),
+      'apply_kip_config',
+      {
+        dashboards: [dash],
+      },
+    )) as { dryRun: boolean };
     expect(result.dryRun).toBe(true);
     expect(captured.some((c) => c.method === 'POST')).toBe(false);
   });
@@ -78,22 +115,34 @@ describe('callWriteTool apply_kip_config', () => {
   it('writes when dryRun:false and confirm:true', async () => {
     const captured: Captured[] = [];
     const appData = makeAppData({ '/user/kip/11': existingConfig }, captured);
-    const result = (await callWriteTool(schema, appData, skWithVersion('2.13.0'), 'apply_kip_config', {
-      dashboards: [dash],
-      dryRun: false,
-      confirm: true,
-    })) as { applied: boolean };
+    const result = (await callWriteTool(
+      schema,
+      appData,
+      skWithVersion('2.13.0'),
+      'apply_kip_config',
+      {
+        dashboards: [dash],
+        dryRun: false,
+        confirm: true,
+      },
+    )) as { applied: boolean };
     expect(result.applied).toBe(true);
     expect(captured.some((c) => c.method === 'POST')).toBe(true);
   });
 
   it('refuses on Signal K older than 1.27', async () => {
     const appData = makeAppData({}, []);
-    const result = (await callWriteTool(schema, appData, skWithVersion('1.26.0'), 'apply_kip_config', {
-      dashboards: [dash],
-      dryRun: false,
-      confirm: true,
-    })) as { refused: boolean };
+    const result = (await callWriteTool(
+      schema,
+      appData,
+      skWithVersion('1.26.0'),
+      'apply_kip_config',
+      {
+        dashboards: [dash],
+        dryRun: false,
+        confirm: true,
+      },
+    )) as { refused: boolean };
     expect(result.refused).toBe(true);
   });
 });

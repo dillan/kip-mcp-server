@@ -14,7 +14,9 @@ describe('loadConfig', () => {
   });
 
   it('prefers KIP_URL and ensures a trailing slash', () => {
-    expect(loadConfig({ KIP_URL: 'http://x/@mxtommy/kip' }).kipBaseUrl).toBe('http://x/@mxtommy/kip/');
+    expect(loadConfig({ KIP_URL: 'http://x/@mxtommy/kip' }).kipBaseUrl).toBe(
+      'http://x/@mxtommy/kip/',
+    );
   });
 
   it('defaults the host and port', () => {

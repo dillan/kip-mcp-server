@@ -25,7 +25,9 @@ export interface LoadOptions {
 
 /** Reads the bundled fallback schema shipped with this package. */
 export function loadBundledSchema(): KipDashboardSchema {
-  return JSON.parse(readFileSync(resourcePath('bundled-schema.json'), 'utf8')) as KipDashboardSchema;
+  return JSON.parse(
+    readFileSync(resourcePath('bundled-schema.json'), 'utf8'),
+  ) as KipDashboardSchema;
 }
 
 class AuthError extends Error {

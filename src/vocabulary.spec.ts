@@ -8,7 +8,11 @@ describe('listWidgets', () => {
     const widgets = listWidgets(schema);
     expect(widgets.length).toBe(schema.widgets.length);
     const numeric = widgets.find((w) => w.selector === 'widget-numeric');
-    expect(numeric).toMatchObject({ name: 'Numeric', category: 'Core', bindingKind: 'paths-record' });
+    expect(numeric).toMatchObject({
+      name: 'Numeric',
+      category: 'Core',
+      bindingKind: 'paths-record',
+    });
   });
 
   it('filters by category', () => {
@@ -19,7 +23,9 @@ describe('listWidgets', () => {
 
   it('filters to widgets that need no plugins', () => {
     const standalone = listWidgets(schema, { requiresNoPlugins: true });
-    expect(standalone.every((w) => w.requiredPlugins.length === 0 && !w.anyOfPlugins?.length)).toBe(true);
+    expect(standalone.every((w) => w.requiredPlugins.length === 0 && !w.anyOfPlugins?.length)).toBe(
+      true,
+    );
     expect(standalone.some((w) => w.selector === 'widget-freeboardsk')).toBe(false);
   });
 });

@@ -48,7 +48,9 @@ export function buildApplyPlan(params: ApplyPlanParams): ApplyPlan {
     warnings.push(`Config "${configName}" does not exist yet; seeding a full config.`);
     warnings.push(sharedNameNote);
     return {
-      requests: [{ kind: 'post-full', body: config, summary: `Create config "${configName}" (full POST)` }],
+      requests: [
+        { kind: 'post-full', body: config, summary: `Create config "${configName}" (full POST)` },
+      ],
       warnings,
       errors,
     };
@@ -60,7 +62,11 @@ export function buildApplyPlan(params: ApplyPlanParams): ApplyPlan {
     warnings.push(sharedNameNote);
     return {
       requests: [
-        { kind: 'post-full', body: config, summary: `Replace "${configName}" (keep existing app/theme)` },
+        {
+          kind: 'post-full',
+          body: config,
+          summary: `Replace "${configName}" (keep existing app/theme)`,
+        },
       ],
       warnings,
       errors,

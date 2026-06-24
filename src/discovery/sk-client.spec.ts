@@ -1,8 +1,6 @@
 import { SkClient } from './sk-client.js';
 
-const captureHeaders = (
-  seen: Array<Record<string, string>>,
-): typeof fetch =>
+const captureHeaders = (seen: Array<Record<string, string>>): typeof fetch =>
   (async (_url: unknown, init?: { headers?: Record<string, string> }) => {
     seen.push(init?.headers ?? {});
     return new Response(JSON.stringify({ server: { version: '2.0.0' } }), { status: 200 });

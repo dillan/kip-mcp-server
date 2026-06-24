@@ -9,24 +9,24 @@
 # (it is vendored inside npm), so it is ignored below and resolved upstream.
 version: 2
 updates:
-  - package-ecosystem: "npm"
-    directory: "/"
+  - package-ecosystem: 'npm'
+    directory: '/'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
     open-pull-requests-limit: 5
     groups:
       dev-dependencies:
-        dependency-type: "development"
+        dependency-type: 'development'
       production-dependencies:
-        dependency-type: "production"
+        dependency-type: 'production'
     ignore:
-      - dependency-name: "undici"
+      - dependency-name: 'undici'
 
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: 'github-actions'
+    directory: '/'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
     groups:
       github-actions:
         patterns:
-          - "*"
+          - '*'

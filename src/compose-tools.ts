@@ -47,7 +47,7 @@ export const COMPOSE_TOOL_SPECS: ToolSpec[] = [
     name: 'recommend_dashboard_set',
     title: 'Recommend a dashboard set',
     description:
-      "Recommend a set of KIP dashboards for this boat: the use-case dashboards its data supports, each with a preview. Does not write anything.",
+      'Recommend a set of KIP dashboards for this boat: the use-case dashboards its data supports, each with a preview. Does not write anything.',
     inputSchema: {
       intents: z
         .array(z.enum(INTENT_IDS))
@@ -63,7 +63,8 @@ export const COMPOSE_TOOL_SPECS: ToolSpec[] = [
   {
     name: 'preview_dashboard',
     title: 'Preview a dashboard',
-    description: 'Render an ASCII preview of a dashboard object (as returned by compose_dashboard).',
+    description:
+      'Render an ASCII preview of a dashboard object (as returned by compose_dashboard).',
     inputSchema: { dashboard: kipObject.describe('A KIP dashboard object.') },
     outputSchema: { ascii: z.string() },
     annotations: READ_ONLY_LOCAL,

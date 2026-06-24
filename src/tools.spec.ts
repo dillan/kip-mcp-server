@@ -38,7 +38,9 @@ describe('callTool', () => {
   });
 
   it('get_widget_schema throws ToolError for an unknown selector', () => {
-    expect(() => callTool(schema, 'get_widget_schema', { selector: 'widget-nope' })).toThrow(ToolError);
+    expect(() => callTool(schema, 'get_widget_schema', { selector: 'widget-nope' })).toThrow(
+      ToolError,
+    );
   });
 
   it('get_unit_options finds the group for a known unit', () => {

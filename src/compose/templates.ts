@@ -48,8 +48,16 @@ export interface DashboardTemplate {
   widgets: DesiredWidget[];
 }
 
-const SOG: DesiredSlot = { slot: 'numericPath', candidates: ['navigation.speedOverGround'], preferredUnit: 'knots' };
-const DEPTH: DesiredSlot = { slot: 'numericPath', candidates: ['environment.depth.belowTransducer'], preferredUnit: 'm' };
+const SOG: DesiredSlot = {
+  slot: 'numericPath',
+  candidates: ['navigation.speedOverGround'],
+  preferredUnit: 'knots',
+};
+const DEPTH: DesiredSlot = {
+  slot: 'numericPath',
+  candidates: ['environment.depth.belowTransducer'],
+  preferredUnit: 'm',
+};
 const WIND_SPEED: DesiredSlot = {
   slot: 'numericPath',
   candidates: ['environment.wind.speedApparent', 'environment.wind.speedTrue'],
@@ -63,16 +71,40 @@ export const TEMPLATES: DashboardTemplate[] = [
     icon: 'dashboard-dashboard',
     widgets: [
       { selector: 'widget-position', color: 'contrast', capabilityGate: 'position', group: 'nav' },
-      { selector: 'widget-numeric', color: 'contrast', slots: [SOG], capabilityGate: 'speed', group: 'nav' },
-      { selector: 'widget-numeric', color: 'contrast', slots: [DEPTH], capabilityGate: 'depth', group: 'nav' },
+      {
+        selector: 'widget-numeric',
+        color: 'contrast',
+        slots: [SOG],
+        capabilityGate: 'speed',
+        group: 'nav',
+      },
+      {
+        selector: 'widget-numeric',
+        color: 'contrast',
+        slots: [DEPTH],
+        capabilityGate: 'depth',
+        group: 'nav',
+      },
       {
         selector: 'widget-gauge-ng-compass',
         color: 'contrast',
         capabilityGate: 'heading',
-        slots: [{ slot: 'gaugePath', candidates: ['navigation.headingTrue', 'navigation.headingMagnetic'], preferredUnit: 'deg' }],
+        slots: [
+          {
+            slot: 'gaugePath',
+            candidates: ['navigation.headingTrue', 'navigation.headingMagnetic'],
+            preferredUnit: 'deg',
+          },
+        ],
         group: 'nav',
       },
-      { selector: 'widget-numeric', color: 'blue', slots: [WIND_SPEED], capabilityGate: 'wind', group: 'wind' },
+      {
+        selector: 'widget-numeric',
+        color: 'blue',
+        slots: [WIND_SPEED],
+        capabilityGate: 'wind',
+        group: 'wind',
+      },
     ],
   },
   {
@@ -84,7 +116,13 @@ export const TEMPLATES: DashboardTemplate[] = [
         selector: 'widget-gauge-ng-compass',
         color: 'contrast',
         capabilityGate: 'heading',
-        slots: [{ slot: 'gaugePath', candidates: ['navigation.headingTrue', 'navigation.headingMagnetic'], preferredUnit: 'deg' }],
+        slots: [
+          {
+            slot: 'gaugePath',
+            candidates: ['navigation.headingTrue', 'navigation.headingMagnetic'],
+            preferredUnit: 'deg',
+          },
+        ],
         size: { w: 8, h: 8 },
       },
       { selector: 'widget-numeric', color: 'contrast', slots: [SOG], capabilityGate: 'speed' },
@@ -103,13 +141,31 @@ export const TEMPLATES: DashboardTemplate[] = [
         capabilityGate: 'wind',
         size: { w: 10, h: 20 },
         slots: [
-          { slot: 'headingPath', candidates: ['navigation.headingTrue', 'navigation.headingMagnetic'], preferredUnit: 'deg' },
-          { slot: 'appWindAngle', candidates: ['environment.wind.angleApparent'], preferredUnit: 'deg' },
-          { slot: 'appWindSpeed', candidates: ['environment.wind.speedApparent'], preferredUnit: 'knots' },
+          {
+            slot: 'headingPath',
+            candidates: ['navigation.headingTrue', 'navigation.headingMagnetic'],
+            preferredUnit: 'deg',
+          },
+          {
+            slot: 'appWindAngle',
+            candidates: ['environment.wind.angleApparent'],
+            preferredUnit: 'deg',
+          },
+          {
+            slot: 'appWindSpeed',
+            candidates: ['environment.wind.speedApparent'],
+            preferredUnit: 'knots',
+          },
         ],
         group: 'wind',
       },
-      { selector: 'widget-numeric', color: 'contrast', slots: [SOG], capabilityGate: 'speed', group: 'nav' },
+      {
+        selector: 'widget-numeric',
+        color: 'contrast',
+        slots: [SOG],
+        capabilityGate: 'speed',
+        group: 'nav',
+      },
       // Heel needs attitude.roll; dropped on boats without it.
       { selector: 'widget-heel-gauge', color: 'contrast', group: 'nav' },
     ],
@@ -119,23 +175,48 @@ export const TEMPLATES: DashboardTemplate[] = [
     name: 'Power',
     icon: 'dashboard-solar-console',
     widgets: [
-      { selector: 'widget-bms', color: 'contrast', capabilityGate: 'battery', size: { w: 6, h: 6 }, needsManualConfig: true, group: 'batt' },
       {
-        selector: 'widget-numeric',
+        selector: 'widget-bms',
         color: 'contrast',
-        slots: [{ slot: 'numericPath', candidates: ['electrical.batteries.house.voltage'], preferredUnit: 'V' }],
+        capabilityGate: 'battery',
+        size: { w: 6, h: 6 },
+        needsManualConfig: true,
         group: 'batt',
       },
       {
         selector: 'widget-numeric',
         color: 'contrast',
-        slots: [{ slot: 'numericPath', candidates: ['electrical.batteries.house.current'], preferredUnit: 'A' }],
+        slots: [
+          {
+            slot: 'numericPath',
+            candidates: ['electrical.batteries.house.voltage'],
+            preferredUnit: 'V',
+          },
+        ],
+        group: 'batt',
+      },
+      {
+        selector: 'widget-numeric',
+        color: 'contrast',
+        slots: [
+          {
+            slot: 'numericPath',
+            candidates: ['electrical.batteries.house.current'],
+            preferredUnit: 'A',
+          },
+        ],
         group: 'batt',
       },
       {
         selector: 'widget-gauge-ng-radial',
         color: 'green',
-        slots: [{ slot: 'gaugePath', candidates: ['electrical.batteries.house.stateOfCharge'], preferredUnit: 'percent' }],
+        slots: [
+          {
+            slot: 'gaugePath',
+            candidates: ['electrical.batteries.house.stateOfCharge'],
+            preferredUnit: 'percent',
+          },
+        ],
         group: 'batt',
       },
     ],
@@ -148,13 +229,25 @@ export const TEMPLATES: DashboardTemplate[] = [
       {
         selector: 'widget-numeric',
         color: 'contrast',
-        slots: [{ slot: 'numericPath', candidates: ['environment.outside.temperature'], preferredUnit: 'celsius' }],
+        slots: [
+          {
+            slot: 'numericPath',
+            candidates: ['environment.outside.temperature'],
+            preferredUnit: 'celsius',
+          },
+        ],
         capabilityGate: 'environment',
       },
       {
         selector: 'widget-numeric',
         color: 'contrast',
-        slots: [{ slot: 'numericPath', candidates: ['environment.outside.pressure'], preferredUnit: 'mbar' }],
+        slots: [
+          {
+            slot: 'numericPath',
+            candidates: ['environment.outside.pressure'],
+            preferredUnit: 'mbar',
+          },
+        ],
         capabilityGate: 'environment',
       },
       { selector: 'widget-numeric', color: 'blue', slots: [WIND_SPEED], capabilityGate: 'wind' },

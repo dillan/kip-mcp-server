@@ -29,7 +29,9 @@ const sk = new SkClient({
 
 describe('callComposeTool', () => {
   it('compose_dashboard designs a dashboard with a preview', async () => {
-    const result = (await callComposeTool(schema, sk, 'compose_dashboard', { intent: 'general' })) as {
+    const result = (await callComposeTool(schema, sk, 'compose_dashboard', {
+      intent: 'general',
+    })) as {
       dashboard: { configuration: unknown[]; name: string };
       preview: string;
     };

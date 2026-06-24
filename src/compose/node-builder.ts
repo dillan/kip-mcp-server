@@ -52,9 +52,10 @@ export function buildWidgetNode(input: BuildWidgetInput): GridNode {
   ) as Record<string, unknown>;
 
   if (input.widget.bindingKind === 'paths-record' && input.bindings) {
-    const paths = (
-      config.paths && typeof config.paths === 'object' ? config.paths : {}
-    ) as Record<string, Record<string, unknown>>;
+    const paths = (config.paths && typeof config.paths === 'object' ? config.paths : {}) as Record<
+      string,
+      Record<string, unknown>
+    >;
     for (const binding of input.bindings) {
       const slot = (paths[binding.slot] ?? {}) as Record<string, unknown>;
       slot.path = binding.path;

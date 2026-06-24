@@ -78,7 +78,9 @@ const looksValid =
   schema.widgets.length > 0 &&
   schema.designSystem;
 if (!looksValid) {
-  console.error('The fetched schema is missing meta.kipVersion, widgets, or designSystem; not writing.');
+  console.error(
+    'The fetched schema is missing meta.kipVersion, widgets, or designSystem; not writing.',
+  );
   process.exit(1);
 }
 

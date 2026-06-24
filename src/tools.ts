@@ -132,7 +132,8 @@ export function callTool(
     case 'list_kip_widgets': {
       const filter: { category?: string; requiresNoPlugins?: boolean } = {};
       if (typeof args.category === 'string') filter.category = args.category;
-      if (typeof args.requiresNoPlugins === 'boolean') filter.requiresNoPlugins = args.requiresNoPlugins;
+      if (typeof args.requiresNoPlugins === 'boolean')
+        filter.requiresNoPlugins = args.requiresNoPlugins;
       return { widgets: listWidgets(schema, filter) };
     }
 
@@ -168,7 +169,11 @@ export function callTool(
       const skUnit = typeof args.skUnit === 'string' ? args.skUnit : '';
       const options = getUnitOptions(schema, skUnit);
       if (!options) {
-        return { found: false, skUnit, note: `No KIP unit group contains the Signal K unit "${skUnit}".` };
+        return {
+          found: false,
+          skUnit,
+          note: `No KIP unit group contains the Signal K unit "${skUnit}".`,
+        };
       }
       return { found: true, ...options };
     }

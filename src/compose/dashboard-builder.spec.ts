@@ -10,7 +10,12 @@ const self = JSON.parse(
   readFileSync(new URL('../discovery/fixtures/sailboat-self.json', import.meta.url), 'utf8'),
 ) as Record<string, unknown>;
 const inventory = flattenVesselData(self);
-const ctx: ResolveContext = { schema, inventory, plugins: [], capabilities: deriveCapabilities(inventory) };
+const ctx: ResolveContext = {
+  schema,
+  inventory,
+  plugins: [],
+  capabilities: deriveCapabilities(inventory),
+};
 
 let counter = 0;
 const uuid = (): string => `id-${(counter += 1)}`;

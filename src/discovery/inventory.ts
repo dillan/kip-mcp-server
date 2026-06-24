@@ -34,7 +34,16 @@ export interface Capabilities {
   hasAutopilot: boolean;
 }
 
-const RESERVED = new Set(['value', 'values', '$source', 'source', 'timestamp', 'meta', 'pgn', 'sentence']);
+const RESERVED = new Set([
+  'value',
+  'values',
+  '$source',
+  'source',
+  'timestamp',
+  'meta',
+  'pgn',
+  'sentence',
+]);
 
 function isLeaf(node: Record<string, unknown>): boolean {
   return 'value' in node || 'values' in node || 'meta' in node;

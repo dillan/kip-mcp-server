@@ -1,4 +1,9 @@
-import { deriveCapabilities, flattenVesselData, type Capabilities, type PathInfo } from './inventory.js';
+import {
+  deriveCapabilities,
+  flattenVesselData,
+  type Capabilities,
+  type PathInfo,
+} from './inventory.js';
 import type { PluginInfo, ServerInfo, SkClient } from './sk-client.js';
 
 export interface DiscoveryResult {

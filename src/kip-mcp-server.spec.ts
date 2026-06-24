@@ -123,6 +123,16 @@ describe('resource templates and completion', () => {
     expect(res.completion.values.every((v) => v.startsWith('widget-g'))).toBe(true);
     await client.close();
   });
+
+  it('completes the optional design_dashboards focus argument', async () => {
+    const client = await connectClient();
+    const res = await client.complete({
+      ref: { type: 'ref/prompt', name: 'design_dashboards' },
+      argument: { name: 'focus', value: 'sa' },
+    });
+    expect(res.completion.values).toContain('sailing');
+    await client.close();
+  });
 });
 
 describe('world-class MCP surface (structured output + annotations)', () => {

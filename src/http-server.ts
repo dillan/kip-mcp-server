@@ -26,7 +26,8 @@ import { loadHttpConfig, type HttpServerConfig } from './http/config.js';
 import { checkSecurity, formatAuditLine, summarizeRpc } from './http/security.js';
 import { HttpSessionManager } from './http/streamable-http.js';
 
-dotenv.config();
+// quiet: keep dotenv's startup tip out of stdout (matches the stdio entrypoint).
+dotenv.config({ quiet: true });
 
 export { loadHttpConfig, type HttpServerConfig };
 

@@ -23,11 +23,14 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: npm
       - run: npm ci
+      - run: npm run format:check
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run build
+      - run: npm run docs:check
       - run: npm run test:coverage
       - run: npm run smoke
+      - run: npm run smoke:http
       - name: Lint PR commit messages
         if: github.event_name == 'pull_request'
         run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose

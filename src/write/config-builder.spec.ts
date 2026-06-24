@@ -21,6 +21,32 @@ describe('buildKipConfig', () => {
     expect(config.dashboards).toEqual([dash]);
   });
 
+  it('seeds app.dataSets for data-chart widgets', () => {
+    const chartDash = {
+      id: 'd2',
+      name: 'Chart',
+      icon: 'dashboard-dashboard',
+      collapseSplitShell: false,
+      configuration: [
+        {
+          id: 'w1',
+          selector: 'widget-host2',
+          input: {
+            widgetProperties: {
+              type: 'widget-data-chart',
+              uuid: 'w1',
+              config: { datachartPath: 'navigation.speedOverGround' },
+            },
+          },
+        },
+      ],
+    };
+    const config = buildKipConfig(schema, [chartDash]);
+    const dataSets = config.app.dataSets as Array<{ uuid: string }>;
+    expect(dataSets).toHaveLength(1);
+    expect(dataSets[0].uuid).toBe('w1');
+  });
+
   it('applies a theme and unit overrides', () => {
     const config = buildKipConfig(schema, [dash], {
       theme: 'light-theme',

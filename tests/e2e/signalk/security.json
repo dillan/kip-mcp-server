@@ -1,0 +1,14 @@
+{
+  "users": [
+    {
+      "username": "e2e",
+      "type": "admin",
+      "password": "$2a$09$PkFOsyojKXnxPWYvVFk7Ue/XQlTNsR.qbQGvC1c3UWDmm5nW2GIFS"
+    }
+  ],
+  "secretKey": "e2e-only-secret-not-for-real-use-0123456789abcdef0123456789abcdef",
+  "expiration": "1h",
+  "allow_readonly": true,
+  "allowNewUserRegistration": false,
+  "allowDeviceAccessRequests": false
+}

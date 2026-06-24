@@ -14,6 +14,24 @@ export interface SlotBinding {
   pathSkUnitsFilter?: string | null;
 }
 
+/**
+ * One control of a `paths-array` widget (a switch or zones panel). KIP links a
+ * control to its data path by a shared `pathID`, and observes the stream by the
+ * path entry's array index, so the builder emits the two arrays in lockstep.
+ */
+export interface PathsArrayControl {
+  ctrlLabel: string;
+  /** Signal K path, self-prefixed (e.g. `self.electrical.switches.nav.state`). */
+  path: string;
+  kind: 'switch' | 'zones';
+  source?: string | null;
+  /** Control type code: '1' toggle / '3' indicator for a switch, '4' for zones. */
+  type?: string;
+  color?: string;
+  pathSkUnitsFilter?: string | null;
+  convertUnitTo?: string | null;
+}
+
 export interface BuildWidgetInput {
   widget: WidgetSchemaEntry;
   /** Stable id; the GridStack node id and widgetProperties.uuid are both set to this. */
@@ -24,6 +42,10 @@ export interface BuildWidgetInput {
   bindings?: SlotBinding[];
   /** Top-level chart binding for a `datachart` widget. */
   dataChart?: { path: string; source?: string | null; convertUnitTo?: string | null };
+  /** Controls for a `paths-array` widget (switch / zones panels). */
+  pathControls?: PathsArrayControl[];
+  /** Id generator for the per-control pathIDs (defaults to crypto.randomUUID). */
+  genId?: () => string;
   /** Extra config to merge over the widget's default config. */
   configOverrides?: Record<string, unknown>;
 }

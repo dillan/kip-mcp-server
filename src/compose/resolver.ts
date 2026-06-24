@@ -1,7 +1,7 @@
 import type { Capabilities, PathInfo } from '../discovery/inventory.js';
 import type { PluginInfo } from '../discovery/sk-client.js';
 import type { KipDashboardSchema, WidgetSchemaEntry } from '../schema/schema-types.js';
-import type { SlotBinding } from './node-builder.js';
+import type { PathsArrayControl, SlotBinding } from './node-builder.js';
 import type { CapabilityGate, DashboardTemplate, DesiredWidget } from './templates.js';
 import { chooseConvertUnit } from './units-match.js';
 
@@ -10,6 +10,7 @@ export interface ResolvedWidget {
   widget: WidgetSchemaEntry;
   bindings: SlotBinding[];
   dataChart?: { path: string; source?: string | null; convertUnitTo?: string | null };
+  pathControls?: PathsArrayControl[];
   color?: string;
   size?: { w: number; h: number };
   group?: string;

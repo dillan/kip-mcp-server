@@ -105,3 +105,22 @@ describe('analyze_signalk_data pagination', () => {
     expect(new Set(collected.map((p) => p.path)).size).toBe(19); // no overlap across pages
   });
 });
+
+describe('discovery caching across tools', () => {
+  it('fetches the vessel tree once for back-to-back discovery tools', async () => {
+    let fetches = 0;
+    const counting = new SkClient({
+      baseUrl: 'http://boat:3000',
+      fetchImpl: (async () => {
+        fetches += 1;
+        return new Response(JSON.stringify(self), { status: 200 });
+      }) as unknown as typeof fetch,
+    });
+    await callDiscoveryTool(counting, 'list_available_paths', {});
+    await callDiscoveryTool(counting, 'get_path_meta', { paths: ['navigation.speedOverGround'] });
+    await callDiscoveryTool(counting, 'get_path_sources', {
+      paths: ['navigation.speedOverGround'],
+    });
+    expect(fetches).toBe(1); // three tools share one cached vessels/self read
+  });
+});

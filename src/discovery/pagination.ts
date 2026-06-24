@@ -51,7 +51,8 @@ export function paginate<T>(all: readonly T[], opts: PageOptions): Page<T> {
   }
   const pageSize = opts.limit ?? DEFAULT_PAGE_SIZE;
   const offset = opts.cursor === undefined ? 0 : decodeCursor(opts.cursor);
-  if (offset < 0 || offset > all.length) {
+  // decodeCursor only yields non-negative offsets, so just guard the upper bound.
+  if (offset > all.length) {
     throw new Error('Invalid pagination cursor.');
   }
   const end = offset + pageSize;

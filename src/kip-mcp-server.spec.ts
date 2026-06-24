@@ -133,6 +133,32 @@ describe('resource templates and completion', () => {
     expect(res.completion.values).toContain('sailing');
     await client.close();
   });
+
+  it('surfaces an error when reading an unknown widget or template URI', async () => {
+    const client = await connectClient();
+    await expect(client.readResource({ uri: 'kip://widget/widget-nope' })).rejects.toThrow(
+      /Unknown widget/,
+    );
+    await expect(client.readResource({ uri: 'kip://template/nope' })).rejects.toThrow(
+      /Unknown template/,
+    );
+    await client.close();
+  });
+
+  it('still lists the static resources when the schema cannot be loaded', async () => {
+    const server = new KipMCPServer({
+      loadSchema: () => Promise.reject(new Error('KIP rejected auth')),
+    });
+    const client = new Client({ name: 'test-client', version: '0.0.0' });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+    // The widget list callback can't load the schema, but listing must not fail.
+    const { resources } = await client.listResources();
+    expect(resources.map((r) => r.uri)).toEqual(
+      expect.arrayContaining(['kip://widget_catalog', 'kip://initial_context']),
+    );
+    await client.close();
+  });
 });
 
 describe('world-class MCP surface (structured output + annotations)', () => {
@@ -219,7 +245,16 @@ describe('guided prompts', () => {
     });
     const text = (result.messages[0].content as { text: string }).text;
     expect(text).toContain('analyze_signalk_data');
-    expect(text).toContain('sailing');
+    expect(text).toContain('Focus especially on: sailing');
+    await client.close();
+  });
+
+  it('keeps focus optional: builds with no focus and omits the focus line', async () => {
+    const client = await connectClient();
+    const result = await client.getPrompt({ name: 'design_dashboards', arguments: {} });
+    const text = (result.messages[0].content as { text: string }).text;
+    expect(text).toContain('analyze_signalk_data');
+    expect(text).not.toContain('Focus especially on');
     await client.close();
   });
 });

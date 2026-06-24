@@ -210,9 +210,24 @@ export class KipMCPServer {
     this.server.registerResource(
       'KIP widget',
       new ResourceTemplate('kip://widget/{selector}', {
-        list: async () => ({ resources: listWidgetResources(await this.getSchema()) }),
+        // These run during resources/list and completion. If the schema can't be
+        // loaded (e.g. a remote KIP rejects auth), degrade to empty rather than
+        // failing the whole listing — reading a widget still surfaces the error.
+        list: async () => {
+          try {
+            return { resources: listWidgetResources(await this.getSchema()) };
+          } catch {
+            return { resources: [] };
+          }
+        },
         complete: {
-          selector: async (value) => completeWidgetSelector(await this.getSchema(), value),
+          selector: async (value) => {
+            try {
+              return completeWidgetSelector(await this.getSchema(), value);
+            } catch {
+              return [];
+            }
+          },
         },
       }),
       {

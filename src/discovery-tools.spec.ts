@@ -40,13 +40,33 @@ describe('list_available_paths pagination', () => {
     expect(new Set(all).size).toBe(19); // no overlap between pages
   });
 
-  it('applies the limit after the prefix filter', async () => {
-    const r = (await callDiscoveryTool(sk(), 'list_available_paths', {
+  it('applies the limit after the prefix filter and pages the filtered set', async () => {
+    const allNav = (
+      (await callDiscoveryTool(sk(), 'list_available_paths', {
+        prefix: 'navigation',
+      })) as PathsResult
+    ).paths;
+    expect(allNav.length).toBeGreaterThan(2); // fixture has several navigation.* paths
+
+    const first = (await callDiscoveryTool(sk(), 'list_available_paths', {
       prefix: 'navigation',
       limit: 2,
     })) as PathsResult;
-    expect(r.paths.length).toBeLessThanOrEqual(2);
-    expect(r.paths.every((p) => p.startsWith('navigation'))).toBe(true);
+    expect(first.paths).toHaveLength(2); // truncated to the limit after filtering
+    expect(first.paths.every((p) => p.startsWith('navigation'))).toBe(true);
+    expect(first.nextCursor).toBeDefined();
+
+    const collected = [...first.paths];
+    let cursor = first.nextCursor;
+    while (cursor) {
+      const page = (await callDiscoveryTool(sk(), 'list_available_paths', {
+        prefix: 'navigation',
+        cursor,
+      })) as PathsResult;
+      collected.push(...page.paths);
+      cursor = page.nextCursor;
+    }
+    expect(new Set(collected)).toEqual(new Set(allNav)); // pages cover exactly the filtered set
   });
 
   it('rejects a malformed cursor', async () => {
@@ -66,5 +86,22 @@ describe('analyze_signalk_data pagination', () => {
     expect(r.paths).toHaveLength(5);
     expect(r.pathCount).toBe(19); // total, not the page size
     expect(r.nextCursor).toBeDefined();
+  });
+
+  it('walks every path across pages with pathCount staying the total', async () => {
+    type Page = { paths: Array<{ path: string }>; pathCount: number; nextCursor?: string };
+    const collected: Array<{ path: string }> = [];
+    let cursor: string | undefined;
+    do {
+      const page = (await callDiscoveryTool(sk(), 'analyze_signalk_data', {
+        limit: 8,
+        cursor,
+      })) as Page;
+      collected.push(...page.paths);
+      expect(page.pathCount).toBe(19); // total on every page, not the page size
+      cursor = page.nextCursor;
+    } while (cursor);
+    expect(collected).toHaveLength(19);
+    expect(new Set(collected.map((p) => p.path)).size).toBe(19); // no overlap across pages
   });
 });

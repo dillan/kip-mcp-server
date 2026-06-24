@@ -36,6 +36,10 @@ If you add or change a tool or prompt, run `npm run docs:tools` and commit the u
 
 Run `npm run ci` before you open a pull request — it's the same set CI runs.
 
+For running the server locally during development — pointing an AI client or the MCP Inspector at a
+local build, running the HTTP transport, and testing against Signal K (or offline) — see
+[docs/development.md](./docs/development.md).
+
 ## How we work
 
 **Tests come first.** Write the failing test before the change, and make sure it fails on

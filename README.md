@@ -139,6 +139,10 @@ npm run smoke      # start the built server and check it answers
 npm run ci         # run the full set of checks
 ```
 
+For a full guide to running and testing the server locally during development — pointing an AI
+client or the MCP Inspector at a local build, running the HTTP transport, and testing against
+Signal K (or offline) — see [docs/development.md](./docs/development.md).
+
 Commits follow [Conventional Commits](https://www.conventionalcommits.org/); releases and
 version numbers are produced automatically from those commit messages.
 

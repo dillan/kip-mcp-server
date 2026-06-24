@@ -1,5 +1,10 @@
 import type { Credentials } from './signalk/auth.js';
 
+/** Thrown when an environment setting is invalid, so startup can fail with a clear message. */
+export class ConfigError extends Error {
+  override name = 'ConfigError';
+}
+
 /** Server configuration derived from environment variables. */
 export interface ServerConfig {
   /** Signal K server base URL, e.g. http://host:3000 */
@@ -34,6 +39,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
   if (token) config.token = token;
   if (username && password) config.credentials = { username, password };
   return config;
+}
+
+/** A one-line, secret-free summary of the resolved config, for startup logging. */
+export function describeConfig(_config: ServerConfig): string {
+  throw new Error('describeConfig not implemented');
 }
 
 function ensureTrailingSlash(url: string): string {

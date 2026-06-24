@@ -1,4 +1,4 @@
-import { loadConfig } from './config.js';
+import { ConfigError, describeConfig, loadConfig } from './config.js';
 
 describe('loadConfig', () => {
   it('derives the KIP base URL from the Signal K host and port', () => {
@@ -34,5 +34,44 @@ describe('loadConfig', () => {
       SIGNALK_PASSWORD: 'secret',
     });
     expect(config.credentials).toEqual({ username: 'me', password: 'secret' });
+  });
+});
+
+describe('loadConfig validation', () => {
+  it('throws a clear error on a non-numeric port', () => {
+    expect(() => loadConfig({ SIGNALK_PORT: 'abc' })).toThrow(ConfigError);
+  });
+
+  it('throws on an out-of-range port', () => {
+    expect(() => loadConfig({ SIGNALK_PORT: '0' })).toThrow(/port/i);
+    expect(() => loadConfig({ SIGNALK_PORT: '70000' })).toThrow(/port/i);
+  });
+
+  it('throws on an invalid KIP_URL', () => {
+    expect(() => loadConfig({ KIP_URL: 'not a url' })).toThrow(ConfigError);
+  });
+
+  it('accepts a valid port and KIP_URL', () => {
+    expect(() =>
+      loadConfig({ SIGNALK_PORT: '3000', KIP_URL: 'http://x/@mxtommy/kip/' }),
+    ).not.toThrow();
+  });
+});
+
+describe('describeConfig', () => {
+  it('summarises the connection and token auth without leaking the secret', () => {
+    const summary = describeConfig(
+      loadConfig({ SIGNALK_HOST: 'boat', SIGNALK_TOKEN: 'super-secret' }),
+    );
+    expect(summary).toContain('boat');
+    expect(summary).toContain('token');
+    expect(summary).not.toContain('super-secret');
+  });
+
+  it('reports the username/password and anonymous auth modes', () => {
+    expect(describeConfig(loadConfig({ SIGNALK_USER: 'u', SIGNALK_PASSWORD: 'p' }))).toContain(
+      'username/password',
+    );
+    expect(describeConfig(loadConfig({}))).toContain('none');
   });
 });

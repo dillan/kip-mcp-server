@@ -93,7 +93,8 @@ The server reads a few settings from its environment:
 
 Reading your data needs no login. Writing dashboards to the server needs either a token or
 a username and password; you can always use the file-export option instead, which needs
-nothing extra.
+nothing extra. For how to get a token (or why a username/password is simpler), see
+[Signal K authentication](./docs/signalk-auth.md).
 
 ## Remote access over HTTP (optional, advanced)
 

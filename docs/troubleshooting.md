@@ -36,7 +36,9 @@ Run `--doctor` to confirm.
 
 **Saving fails with an authentication error (HTTP 401 or 403).**
 Reading data needs no login, but **writing** dashboards does. Set a token (`SIGNALK_TOKEN`) or a
-username and password (`SIGNALK_USER` and `SIGNALK_PASSWORD`). See [.env.example](../.env.example).
+username and password (`SIGNALK_USER` and `SIGNALK_PASSWORD`). See
+[Signal K authentication](./signalk-auth.md) for how to get a token (`npm run signalk:request-token`)
+and [.env.example](../.env.example).
 
 **"Using the bundled schema generated for KIP …" warning.**
 The server couldn't fetch the live schema from your KIP, so it fell back to a bundled copy. Things

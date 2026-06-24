@@ -14,7 +14,8 @@ You need [Node.js](https://nodejs.org) 24 or newer. Each guide uses `npx -y kip-
 which downloads and runs the server on demand — there's nothing to install first.
 
 Prefer to run a local build instead of `npx`? Build it once (`npm ci && npm run build`) and
-use `node /full/path/to/dist/index.js` wherever a guide says `npx -y kip-mcp-server`.
+use `node /full/path/to/dist/index.js` wherever a guide says `npx -y kip-mcp-server`. The
+[development guide](../development.md) covers local builds, the MCP Inspector, and the HTTP transport.
 
 ## Settings you'll provide
 

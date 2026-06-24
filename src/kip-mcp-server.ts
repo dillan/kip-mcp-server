@@ -62,6 +62,26 @@ const RESOURCES = [
     description: 'How to design KIP dashboards with this server.',
     mimeType: 'text/markdown',
   },
+  {
+    uri: 'kip://ux-review-guide',
+    name: 'KIP UX review guide',
+    description:
+      'How to review a KIP dashboard for marine UX: the six passes, severity rubric, and output format. Used by the review_dashboard prompt.',
+    mimeType: 'text/markdown',
+  },
+  {
+    uri: 'kip://ux-laws',
+    name: 'Laws of UX for marine dashboards',
+    description: 'The codified Laws of UX, each translated to a KIP marine instrument display.',
+    mimeType: 'text/markdown',
+  },
+  {
+    uri: 'kip://ux-conventions',
+    name: 'KIP and marine conventions',
+    description:
+      'Widget catalog, marine abbreviations, units, precision, colour/zones, copy style, and a common-anti-patterns scan.',
+    mimeType: 'text/markdown',
+  },
 ];
 
 /**
@@ -276,6 +296,12 @@ export class KipMCPServer {
         return JSON.stringify(schema.designSystem, null, 2);
       case 'kip://initial_context':
         return readResourceText('kip-initial-context.md');
+      case 'kip://ux-review-guide':
+        return readResourceText('ux/review-guide.md');
+      case 'kip://ux-laws':
+        return readResourceText('ux/ux-laws.md');
+      case 'kip://ux-conventions':
+        return readResourceText('ux/kip-conventions.md');
       default:
         throw new Error(`Unknown resource "${uri}".`);
     }

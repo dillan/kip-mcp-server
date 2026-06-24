@@ -43,6 +43,54 @@ function userMessage(lines: string[]): PromptResult {
   };
 }
 
+/** The UX-review skill's actions (see the kip://ux-review-guide resource). */
+const UX_ACTIONS = ['review', 'copy', 'principles', 'brief'];
+
+const UX_PREAMBLE =
+  'You are an expert marine-instrument UX reviewer for KIP (Signal K) dashboards. ' +
+  'Read these resources first: `kip://ux-review-guide` (the method, six passes, severity ' +
+  'rubric, and output format), `kip://ux-laws` (the Laws of UX for marine displays), and ' +
+  '`kip://ux-conventions` (widget catalog, marine abbreviations, units, precision, ' +
+  'colour/zones, copy style, and anti-patterns).';
+
+function uxReviewMessage(action: string | undefined): PromptResult {
+  switch ((action ?? 'review').toLowerCase()) {
+    case 'principles':
+      return userMessage([
+        UX_PREAMBLE,
+        'Action: principles. Present the codified pattern reference — summarise `kip://ux-laws` ' +
+          'and the relevant parts of `kip://ux-conventions`. No dashboard config is needed.',
+      ]);
+    case 'brief':
+      return userMessage([
+        UX_PREAMBLE,
+        'Action: brief. Ask me for the use case and device (e.g. "underway helm on a 10-inch ' +
+          'chartplotter"), then propose a dashboard layout from scratch per the guide\'s `brief` ' +
+          'action: establish the job first, then lay out impact-weighted, grouped widgets with ' +
+          'recommended types, labels, units, precision, and zones.',
+      ]);
+    case 'copy':
+      return userMessage([
+        UX_PREAMBLE,
+        'Action: copy. I will paste my KIP dashboard config JSON. Do a focused pass on labels, ' +
+          'units, precision, and alarm/notification text only (Pass D plus §7 of ' +
+          '`kip://ux-conventions`). Output the copy findings with Before → After and the filler scan.',
+      ]);
+    default:
+      return userMessage([
+        UX_PREAMBLE,
+        'Action: review. I will paste my KIP dashboard config JSON (and, if I can, a screenshot). Steps:',
+        '1. Run `check_dashboard_ux` on the config for the objective findings (mixed units, ' +
+          'inconsistent precision, raw-path labels, duplicate paths, overlapping cells), and ' +
+          '`validate_kip_config` for structural problems.',
+        '2. Run the six-pass review from `kip://ux-review-guide`, grounding each finding in the ' +
+          'config or the screenshot.',
+        "3. Emit the severity-tagged checklist exactly in the guide's output format, then offer a " +
+          'patched config.',
+      ]);
+  }
+}
+
 export const PROMPT_SPECS: PromptSpec[] = [
   {
     name: 'design_dashboards',
@@ -68,14 +116,14 @@ export const PROMPT_SPECS: PromptSpec[] = [
   {
     name: 'review_dashboard',
     title: 'Review a KIP dashboard',
-    description: 'Check a dashboard for problems and suggest fixes in plain language.',
-    argsSchema: {},
-    build: () =>
-      userMessage([
-        'Please review my KIP dashboard:',
-        '1. Call `validate_kip_config` on it.',
-        '2. Explain any errors or warnings in plain language.',
-        '3. Suggest specific fixes, and offer to apply them.',
-      ]),
+    description:
+      'Critique a KIP dashboard for marine UX — visual hierarchy, grouping, consistency, and copy — with severity-tagged findings and fixes. Actions: review (default), copy, principles, brief.',
+    argsSchema: {
+      action: optionalCompletable(
+        'What to do: review (default), copy, principles, or brief.',
+        prefixComplete(UX_ACTIONS),
+      ),
+    },
+    build: ({ action }) => uxReviewMessage(action),
   },
 ];

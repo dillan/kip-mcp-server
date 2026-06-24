@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { readResourceText } from './resources.js';
 import type { KipDashboardSchema } from './schema/schema-types.js';
 import { kipObject, READ_ONLY_LOCAL, type ToolSpec } from './tool-spec.js';
+import { checkDashboardUx } from './ux/check-dashboard.js';
 import { validateDashboard } from './validators.js';
 import { getDesignSystem, getUnitOptions, getWidgetSchema, listWidgets } from './vocabulary.js';
 import { buildKipConfig } from './write/config-builder.js';
@@ -117,6 +118,23 @@ export const VOCAB_TOOL_SPECS: ToolSpec[] = [
     outputSchema: { filename: z.string(), json: z.string() },
     annotations: READ_ONLY_LOCAL,
   },
+  {
+    name: 'check_dashboard_ux',
+    title: 'Check dashboard UX',
+    description:
+      'Deterministic UX lint for a KIP dashboard: flags raw/missing labels, duplicate paths, overlapping grid cells, mixed units, and inconsistent precision. Anchors a UX review (see the kip://ux-review-guide resource); it judges objective consistency only, not impact or legibility.',
+    inputSchema: { dashboard: kipObject.describe('A KIP dashboard object.') },
+    outputSchema: {
+      ok: z.boolean(),
+      summary: z.string(),
+      rawPathLabels: z.array(kipObject),
+      duplicatePaths: z.array(kipObject),
+      overlappingCells: z.array(kipObject),
+      mixedUnits: z.array(kipObject),
+      inconsistentPrecision: z.array(kipObject),
+    },
+    annotations: READ_ONLY_LOCAL,
+  },
 ];
 
 /** Runs a tool by name and returns its structured result. Throws ToolError on bad input. */
@@ -153,6 +171,9 @@ export function callTool(
 
     case 'validate_kip_config':
       return validateDashboard(args.dashboard, schema);
+
+    case 'check_dashboard_ux':
+      return checkDashboardUx(args.dashboard);
 
     case 'export_kip_config': {
       const dashboards = Array.isArray(args.dashboards) ? args.dashboards : [];

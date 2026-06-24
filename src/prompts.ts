@@ -3,8 +3,8 @@
  * they don't have to know which tools to call in which order. Each prompt
  * returns a single user message that tells the assistant how to proceed.
  */
-import { completable } from '@modelcontextprotocol/sdk/server/completable.js';
 import { z } from 'zod';
+import { optionalCompletable, prefixComplete } from './completion.js';
 
 /** Common areas a user might want a dashboard set to emphasise. */
 const FOCUS_AREAS = [
@@ -50,10 +50,10 @@ export const PROMPT_SPECS: PromptSpec[] = [
     description:
       "Guided workflow: look at the boat's data, recommend dashboards, preview them, and install them with your OK.",
     argsSchema: {
-      focus: completable(
-        z.string().describe('Optional area to emphasise, e.g. "sailing", "engine" or "anchoring".'),
-        (value) => FOCUS_AREAS.filter((a) => a.toLowerCase().startsWith(value.toLowerCase())),
-      ).optional(),
+      focus: optionalCompletable(
+        'Optional area to emphasise, e.g. "sailing", "engine" or "anchoring".',
+        prefixComplete(FOCUS_AREAS),
+      ),
     },
     build: ({ focus }) =>
       userMessage([

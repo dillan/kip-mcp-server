@@ -58,10 +58,22 @@ export class TokenProvider {
     this.options = options;
   }
 
-  /** Returns a token, or undefined when no auth is configured. */
-  async get(): Promise<string | undefined> {
+  /**
+   * Returns a token, or undefined when no auth is configured.
+   *
+   * Pass `{ forceRefresh: true }` after a request was rejected (401/403) to drop
+   * the cached login and authenticate again. A static `SIGNALK_TOKEN` can't be
+   * re-derived, so `forceRefresh` returns it unchanged.
+   *
+   * Concurrent forced refreshes are not coalesced: if several requests are
+   * rejected in the same tick they may each re-login. That is bounded (by the
+   * number of in-flight requests) and harmless, since the login is idempotent
+   * and every caller still receives a valid fresh token.
+   */
+  async get(opts?: { forceRefresh?: boolean }): Promise<string | undefined> {
     if (this.options.token) return this.options.token;
     if (!this.options.credentials) return undefined;
+    if (opts?.forceRefresh) this.pending = undefined;
     if (!this.pending) {
       this.pending = signalkLogin(
         this.options.baseUrl,

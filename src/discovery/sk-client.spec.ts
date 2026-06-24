@@ -97,4 +97,17 @@ describe('SkClient token renewal', () => {
     await expect(sk.getServerInfo()).rejects.toThrow(/401|SIGNALK/);
     expect(counters.attempts).toBe(2); // initial + exactly one retry, never loops
   });
+
+  it('does not retry when the refresh yields no token', async () => {
+    const counters = { attempts: 0 };
+    const getToken = async (opts?: { forceRefresh?: boolean }) =>
+      opts?.forceRefresh ? undefined : 'stale'; // token lost on refresh (e.g. revoked)
+    const sk = new SkClient({
+      baseUrl: 'http://boat:3000',
+      getToken,
+      fetchImpl: renewingFetch(counters),
+    });
+    await expect(sk.getServerInfo()).rejects.toThrow(/401/);
+    expect(counters.attempts).toBe(1); // refresh returned undefined -> no retry
+  });
 });

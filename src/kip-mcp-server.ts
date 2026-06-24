@@ -76,14 +76,15 @@ export class KipMCPServer {
     this.config = config;
     this.schema = options.schema;
     this.loadSchemaFn = options.loadSchema ?? (() => loadKipSchema({ baseUrl: config.kipBaseUrl }));
-    // One token source, shared by the read and write clients, so a username/
-    // password login happens at most once.
+    // One token source, shared by the read and write clients: a username/password
+    // login runs once per token lifetime and is re-authenticated on demand when a
+    // request is rejected (401/403).
     const tokens = new TokenProvider({
       baseUrl: config.signalkBaseUrl,
       token: config.token,
       credentials: config.credentials,
     });
-    const getToken = () => tokens.get();
+    const getToken = (opts?: { forceRefresh?: boolean }) => tokens.get(opts);
     this.sk = options.sk ?? new SkClient({ baseUrl: config.signalkBaseUrl, getToken });
     this.appData =
       options.appData ?? new SkAppDataClient({ baseUrl: config.signalkBaseUrl, getToken });

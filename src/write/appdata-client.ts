@@ -5,7 +5,7 @@ export interface AppDataClientOptions {
   baseUrl: string;
   token?: string;
   /** Optional async token source (e.g. a username/password login). Preferred over `token`. */
-  getToken?: () => Promise<string | undefined>;
+  getToken?: (opts?: { forceRefresh?: boolean }) => Promise<string | undefined>;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
 }
@@ -14,7 +14,7 @@ export interface AppDataClientOptions {
 export class SkAppDataClient {
   private readonly base: string;
   private readonly token?: string;
-  private readonly getToken?: () => Promise<string | undefined>;
+  private readonly getToken?: (opts?: { forceRefresh?: boolean }) => Promise<string | undefined>;
   private readonly fetchImpl: typeof fetch;
   private readonly timeoutMs: number;
 
@@ -34,7 +34,7 @@ export class SkAppDataClient {
     return `${this.base}${scope}/kip/${fileVersion}`;
   }
 
-  private async request(url: string, init: RequestInit): Promise<Response> {
+  private async request(url: string, init: RequestInit, retried = false): Promise<Response> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
@@ -46,6 +46,12 @@ export class SkAppDataClient {
       if (token) headers.authorization = `JWT ${token}`;
       const response = await this.fetchImpl(url, { ...init, headers, signal: controller.signal });
       if (response.status === 401 || response.status === 403) {
+        // A 401/403 means the request was rejected before processing, so it is
+        // safe to re-send: refresh the token and, if it changed, retry once.
+        if (this.getToken && !retried) {
+          const fresh = await this.getToken({ forceRefresh: true });
+          if (fresh && fresh !== token) return this.request(url, init, true);
+        }
         throw new Error(
           `Signal K returned HTTP ${response.status} for applicationData. Set SIGNALK_TOKEN, ` +
             `or SIGNALK_USER and SIGNALK_PASSWORD.`,

@@ -35,4 +35,41 @@ describe('SkAppDataClient token renewal', () => {
     );
     expect(attempts).toBe(2); // initial + exactly one retry, never loops
   });
+
+  it('retries a write with the fresh token, preserving method and body', async () => {
+    const calls: Array<{ method?: string; body?: unknown; auth?: string }> = [];
+    let refreshed = false;
+    const fetchImpl = (async (
+      _url: unknown,
+      init?: { method?: string; body?: unknown; headers?: Record<string, string> },
+    ) => {
+      const auth = init?.headers?.authorization;
+      calls.push({ method: init?.method, body: init?.body, auth });
+      if (auth === 'JWT fresh') return new Response('', { status: 200 });
+      return new Response('no', { status: 401 });
+    }) as unknown as typeof fetch;
+    const getToken = async (opts?: { forceRefresh?: boolean }) => {
+      if (opts?.forceRefresh) refreshed = true;
+      return refreshed ? 'fresh' : 'stale';
+    };
+    const client = new SkAppDataClient({ baseUrl: 'http://boat:3000', getToken, fetchImpl });
+    await client.postFull('global', 'default', 1, { dashboards: [] });
+    expect(calls).toHaveLength(2); // initial 401 + retry
+    expect(calls[1]?.method).toBe('POST'); // method survives the retry
+    expect(calls[1]?.body).toBe(JSON.stringify({ dashboards: [] })); // body survives the retry
+    expect(calls[1]?.auth).toBe('JWT fresh'); // retry carries the refreshed token
+  });
+
+  it('does not retry when the refresh yields no token', async () => {
+    let attempts = 0;
+    const fetchImpl = (async () => {
+      attempts += 1;
+      return new Response('no', { status: 401 });
+    }) as unknown as typeof fetch;
+    const getToken = async (opts?: { forceRefresh?: boolean }) =>
+      opts?.forceRefresh ? undefined : 'stale';
+    const client = new SkAppDataClient({ baseUrl: 'http://boat:3000', getToken, fetchImpl });
+    await expect(client.getConfig('global', 'default', 1)).rejects.toThrow(/401|applicationData/);
+    expect(attempts).toBe(1); // refresh returned undefined -> no retry
+  });
 });

@@ -40,6 +40,31 @@ describe('callComposeTool', () => {
     expect(typeof result.preview).toBe('string');
   });
 
+  it('compose_dashboard threads a per-path source override into the config', async () => {
+    const withOverride = (await callComposeTool(schema, sk, 'compose_dashboard', {
+      intent: 'general',
+      sources: { 'navigation.speedOverGround': 'gps.1' },
+    })) as { dashboard: unknown; notes: string[] };
+    expect(JSON.stringify(withOverride.dashboard)).toContain('"source":"gps.1"');
+    expect(withOverride.notes.join(' ')).toContain('using source "gps.1"');
+
+    // Without the override, the chosen source never appears (default behaviour).
+    const plain = (await callComposeTool(schema, sk, 'compose_dashboard', {
+      intent: 'general',
+    })) as { dashboard: unknown };
+    expect(JSON.stringify(plain.dashboard)).not.toContain('gps.1');
+  });
+
+  it('compose_dashboard notes a source override that did not bind', async () => {
+    const result = (await callComposeTool(schema, sk, 'compose_dashboard', {
+      intent: 'general',
+      sources: { 'made.up.path': 'x.0' },
+    })) as { notes: string[] };
+    expect(result.notes.some((n) => n.includes('made.up.path') && n.includes('not applied'))).toBe(
+      true,
+    );
+  });
+
   it('compose_dashboard rejects an unknown intent', async () => {
     await expect(
       callComposeTool(schema, sk, 'compose_dashboard', { intent: 'nope' }),

@@ -60,10 +60,13 @@ export function composeDashboard(
     });
   });
 
-  const notes = resolved.satisfied.flatMap((w) => [
-    ...w.notes.map((n) => `${w.selector}: ${n}`),
-    ...(w.needsManualConfig ? [`${w.selector}: needs manual configuration in KIP`] : []),
-  ]);
+  const notes = [
+    ...resolved.satisfied.flatMap((w) => [
+      ...w.notes.map((n) => `${w.selector}: ${n}`),
+      ...(w.needsManualConfig ? [`${w.selector}: needs manual configuration in KIP`] : []),
+    ]),
+    ...resolved.notes,
+  ];
 
   return {
     dashboard: {

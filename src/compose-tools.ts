@@ -46,6 +46,14 @@ export const COMPOSE_TOOL_SPECS: ToolSpec[] = [
       intent: z.enum(INTENT_IDS).describe('Which dashboard to design.'),
       name: z.string().optional().describe('Override the dashboard name.'),
       icon: z.string().optional().describe('Override the dashboard icon.'),
+      sources: z
+        .record(z.string(), z.string())
+        .optional()
+        .describe(
+          'Pick a non-default Signal K source per path: map a path (e.g. ' +
+            '"navigation.speedOverGround") to a source id from get_path_sources. ' +
+            'Paths not listed use the server default.',
+        ),
     },
     outputSchema: {
       dashboard: kipObject,
@@ -124,7 +132,7 @@ export async function callComposeTool(
       if (!template) {
         throw new ToolError(`Unknown intent "${intent}". Known intents: ${INTENT_IDS.join(', ')}.`);
       }
-      const resolveCtx = await buildContext(schema, sk);
+      const resolveCtx = await buildContext(schema, sk, parseSources(args.sources));
       const override = {
         ...(typeof args.name === 'string' ? { name: args.name } : {}),
         ...(typeof args.icon === 'string' ? { icon: args.icon } : {}),
@@ -181,12 +189,26 @@ export async function callComposeTool(
   }
 }
 
-async function buildContext(schema: KipDashboardSchema, sk: SkClient): Promise<ResolveContext> {
+/** Keeps only string->string entries from a user-supplied source override map. */
+function parseSources(raw: unknown): Record<string, string> | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const entries = Object.entries(raw as Record<string, unknown>).filter(
+    (e): e is [string, string] => typeof e[1] === 'string',
+  );
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+}
+
+async function buildContext(
+  schema: KipDashboardSchema,
+  sk: SkClient,
+  sourceOverrides?: Record<string, string>,
+): Promise<ResolveContext> {
   const discovery = await discoverInventory(sk);
   return {
     schema,
     inventory: discovery.paths,
     plugins: discovery.plugins,
     capabilities: discovery.capabilities,
+    ...(sourceOverrides ? { sourceOverrides } : {}),
   };
 }

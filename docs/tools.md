@@ -146,6 +146,7 @@ Design one KIP dashboard for an intent by binding widgets to the boat's data. Re
 | `intent` | `general` / `navigation` / `sailing` / `power` / `environment` | yes | Which dashboard to design. |
 | `name` | string | no | Override the dashboard name. |
 | `icon` | string | no | Override the dashboard icon. |
+| `sources` | object | no | Pick a non-default Signal K source per path: map a path (e.g. "navigation.speedOverGround") to a source id from get_path_sources. Paths not listed use the server default. |
 
 ### `recommend_dashboard_set`
 

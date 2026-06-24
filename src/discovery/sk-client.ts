@@ -19,6 +19,10 @@ export interface SkClientOptions {
   getToken?: (opts?: { forceRefresh?: boolean }) => Promise<string | undefined>;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
+  /** Reuse a successful GET for this many ms, coalescing repeat/concurrent reads. 0 disables. */
+  cacheTtlMs?: number;
+  /** Injectable clock in ms (defaults to Date.now), for deterministic tests. */
+  now?: () => number;
 }
 
 export class SkClient {
@@ -27,6 +31,9 @@ export class SkClient {
   private readonly getToken?: (opts?: { forceRefresh?: boolean }) => Promise<string | undefined>;
   private readonly fetchImpl: typeof fetch;
   private readonly timeoutMs: number;
+  private readonly cacheTtlMs: number;
+  private readonly now: () => number;
+  private readonly cache = new Map<string, { at: number; value: Promise<unknown> }>();
 
   constructor(options: SkClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/$/, '');
@@ -34,9 +41,32 @@ export class SkClient {
     this.getToken = options.getToken;
     this.fetchImpl = options.fetchImpl ?? fetch;
     this.timeoutMs = options.timeoutMs ?? 8000;
+    this.cacheTtlMs = options.cacheTtlMs ?? 5000;
+    this.now = options.now ?? Date.now;
   }
 
-  private async getJson(path: string, retried = false): Promise<unknown> {
+  /**
+   * Reads JSON, reusing a recent successful response for up to `cacheTtlMs` so
+   * repeat and concurrent reads of the same path hit the server once — pagination
+   * pages, back-to-back discovery tools (list/meta/sources), and analyze+validate
+   * in one workflow. Only successes are cached; the server's path/unit structure
+   * is stable over a few seconds and this client never writes vessel data, so a
+   * short TTL needs no invalidation.
+   */
+  private getJson(path: string): Promise<unknown> {
+    if (this.cacheTtlMs <= 0) return this.fetchJson(path, false);
+    const hit = this.cache.get(path);
+    if (hit && this.now() - hit.at < this.cacheTtlMs) return hit.value;
+    const entry = { at: this.now(), value: undefined as unknown as Promise<unknown> };
+    entry.value = this.fetchJson(path, false).catch((error: unknown) => {
+      if (this.cache.get(path) === entry) this.cache.delete(path); // never cache a failure
+      throw error;
+    });
+    this.cache.set(path, entry);
+    return entry.value;
+  }
+
+  private async fetchJson(path: string, retried: boolean): Promise<unknown> {
     const url = `${this.baseUrl}${path}`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
@@ -50,7 +80,7 @@ export class SkClient {
         // changed, retry the request exactly once before giving up.
         if (this.getToken && !retried) {
           const fresh = await this.getToken({ forceRefresh: true });
-          if (fresh && fresh !== token) return this.getJson(path, true);
+          if (fresh && fresh !== token) return this.fetchJson(path, true);
         }
         throw new Error(
           `Signal K returned HTTP ${response.status} for ${path}. ` +

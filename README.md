@@ -72,6 +72,13 @@ The server gives the assistant a set of tools, grouped by job:
 - **Check and save** — check a dashboard is well-formed, export it to a file, or write it to
   the boat (asking first).
 
+## More help
+
+- **[Recipes](./docs/recipes.md)** — worked examples of asking the assistant to design dashboards.
+- **[Troubleshooting](./docs/troubleshooting.md)** — fixes for the common problems, starting with
+  the built-in `--doctor` check.
+- **[Tool reference](./docs/tools.md)** — every tool and prompt the assistant can use.
+
 ## Glossary
 
 A few terms, in plain words:

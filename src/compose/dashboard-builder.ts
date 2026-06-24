@@ -56,6 +56,7 @@ export function composeDashboard(
       ...(w.color ? { color: w.color } : {}),
       bindings: w.bindings,
       ...(w.dataChart ? { dataChart: w.dataChart } : {}),
+      ...(w.pathControls ? { pathControls: w.pathControls, genId: nextUuid } : {}),
     });
   });
 

@@ -128,4 +128,16 @@ describe('resolveTemplate paths-array controls', () => {
     expect(result.satisfied).toHaveLength(0);
     expect(result.dropped.map((d) => d.selector)).toContain('widget-boolean-switch');
   });
+
+  it('drops a paths-array widget that defines no controls (no empty panels)', () => {
+    const tmpl: DashboardTemplate = {
+      id: 'x',
+      name: 'X',
+      icon: 'dashboard-dashboard',
+      widgets: [{ selector: 'widget-boolean-switch' }],
+    };
+    const result = resolveTemplate(tmpl, ctx);
+    expect(result.satisfied).toHaveLength(0);
+    expect(result.dropped.map((d) => d.selector)).toContain('widget-boolean-switch');
+  });
 });

@@ -146,6 +146,30 @@ export function resolveTemplate(template: DashboardTemplate, ctx: ResolveContext
       }
     }
 
+    let pathControls: ResolvedWidget['pathControls'];
+    if (!unsatisfied && widget.bindingKind === 'paths-array') {
+      const defaultKind = widget.selector === 'widget-zones-state-panel' ? 'zones' : 'switch';
+      const resolved: PathsArrayControl[] = [];
+      for (const control of dw.controls ?? []) {
+        const bare = control.candidates.find((c) => byPath.has(c));
+        if (!bare) continue; // a control with no data is simply left out of the panel
+        resolved.push({
+          ctrlLabel: control.ctrlLabel,
+          path: `self.${bare}`,
+          kind: control.kind ?? defaultKind,
+          ...(control.type ? { type: control.type } : {}),
+        });
+      }
+      // Drop an empty panel: no controls defined, or none of them had data.
+      if (resolved.length === 0) {
+        unsatisfied = dw.controls?.length
+          ? 'no data for any switch/zones control'
+          : 'paths-array widget has no controls';
+      } else {
+        pathControls = resolved;
+      }
+    }
+
     if (unsatisfied) {
       dropped.push({ selector: dw.selector, reason: unsatisfied });
       continue;
@@ -156,6 +180,7 @@ export function resolveTemplate(template: DashboardTemplate, ctx: ResolveContext
       widget,
       bindings,
       ...(dataChart ? { dataChart } : {}),
+      ...(pathControls ? { pathControls } : {}),
       ...(dw.color ? { color: dw.color } : {}),
       ...(dw.size ? { size: dw.size } : {}),
       ...(dw.group ? { group: dw.group } : {}),

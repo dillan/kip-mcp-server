@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import lodash from 'lodash';
 import type { WidgetSchemaEntry } from '../schema/schema-types.js';
 
@@ -93,6 +94,44 @@ export function buildWidgetNode(input: BuildWidgetInput): GridNode {
     config.datachartPath = input.dataChart.path;
     if (input.dataChart.source != null) config.datachartSource = input.dataChart.source;
     if (input.dataChart.convertUnitTo != null) config.convertUnitTo = input.dataChart.convertUnitTo;
+  }
+
+  if (input.widget.bindingKind === 'paths-array' && input.pathControls) {
+    // KIP links each control to its path entry by a shared pathID and observes the
+    // stream by the path's array index, so push to both arrays in lockstep. Assign
+    // the arrays (don't merge — lodash merges arrays by index).
+    const genId = input.genId ?? randomUUID;
+    const paths: Record<string, unknown>[] = [];
+    const ctrls: Record<string, unknown>[] = [];
+    for (const control of input.pathControls) {
+      const pathID = genId();
+      const zones = control.kind === 'zones';
+      paths.push({
+        description: control.ctrlLabel,
+        path: control.path,
+        source: control.source ?? 'default',
+        pathType: zones ? 'number' : 'boolean',
+        zonesOnlyPaths: zones,
+        supportsPut: !zones,
+        isPathConfigurable: true,
+        showPathSkUnitsFilter: false,
+        pathSkUnitsFilter: control.pathSkUnitsFilter ?? null,
+        convertUnitTo: control.convertUnitTo ?? null,
+        sampleTime: 500,
+        pathID,
+      });
+      ctrls.push({
+        ctrlLabel: control.ctrlLabel,
+        // Zones panels only render type '4'; never let an override decouple type from kind.
+        type: zones ? '4' : (control.type ?? '1'),
+        pathID,
+        color: control.color ?? 'contrast',
+        isNumeric: zones,
+        value: null,
+      });
+    }
+    config.paths = paths;
+    config.multiChildCtrls = ctrls;
   }
 
   if (input.color) config.color = input.color;

@@ -149,4 +149,18 @@ describe('buildWidgetNode', () => {
     expect(cfg.paths.map((p) => p.pathID)).toEqual(cfg.multiChildCtrls.map((c) => c.pathID));
     expect(cfg.paths[0].pathID).not.toBe(cfg.paths[1].pathID);
   });
+
+  it('forces a zones control to type "4" even when an override asks for something else', () => {
+    const node = buildWidgetNode({
+      widget: zonesPanel,
+      uuid: 'z2',
+      position: { x: 0, y: 0, w: 4, h: 4 },
+      pathControls: [
+        { ctrlLabel: 'Temp', path: 'self.propulsion.port.temperature', kind: 'zones', type: '1' },
+      ],
+      genId: () => 'zid2',
+    });
+    const cfg = node.input.widgetProperties.config as unknown as PathsArrayView;
+    expect(cfg.multiChildCtrls[0].type).toBe('4');
+  });
 });

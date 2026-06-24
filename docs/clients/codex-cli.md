@@ -1,7 +1,12 @@
 # Codex CLI
 
-Edit `~/.codex/config.toml` and add a `kip` server. `npx` downloads and runs it on demand,
-so there's nothing to install first:
+Edit Codex's `config.toml` and add a `kip` server. `npx` downloads and runs it on demand,
+so there's nothing to install first. The file lives at:
+
+- **macOS / Linux:** `~/.codex/config.toml`
+- **Windows:** `%USERPROFILE%\.codex\config.toml` (that's `C:\Users\<you>\.codex\config.toml`)
+
+(If you've set `CODEX_HOME`, it's `$CODEX_HOME/config.toml` instead.)
 
 ```toml
 [mcp_servers.kip]

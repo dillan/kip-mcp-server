@@ -16,3 +16,7 @@ To let it **save** dashboards to the boat, add `-e SIGNALK_TOKEN=your-token`. Wi
 token it can still produce a `KipConfig.json` file for you to import in KIP.
 
 Check it's connected with `claude mcp list`.
+
+You don't edit a config file by hand here — `claude mcp add` writes it for you, to
+`~/.claude.json` (`%USERPROFILE%\.claude.json` on Windows). To share the server with a project
+repo instead, add `--scope project`, which writes a `.mcp.json` in the project root.

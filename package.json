@@ -33,6 +33,7 @@
     "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
     "smoke": "node scripts/smoke.mjs",
     "smoke:http": "node scripts/smoke-http.mjs",
+    "test:e2e": "node scripts/e2e.mjs",
     "schema:refresh": "node scripts/refresh-schema.mjs",
     "registry:sync": "node scripts/sync-server-json-version.mjs",
     "docs:tools": "node scripts/gen-tool-reference.mjs",

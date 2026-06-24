@@ -33,6 +33,23 @@ npm run ci           # the full gate CI runs (see below)
 Run `npm run ci` before opening a pull request — it runs format-check, typecheck, lint, build, the
 tool-reference drift check, coverage, and both smoke tests, exactly as CI does.
 
+## End-to-end test against a real Signal K (Docker)
+
+`npm run ci` is all in-process. To prove the **built binary** works against a **real** Signal K
+server, there's a separate end-to-end test (needs Docker, and a build first):
+
+```bash
+npm run build
+npm run test:e2e
+```
+
+It spins up a throwaway Signal K server in Docker (`docker-compose.e2e.yml`, preloaded with a
+known admin user from `tests/e2e/`), seeds it with vessel data, then drives `dist/index.js` over
+MCP exactly as a client would: log in, `analyze_signalk_data`, `compose_dashboard`,
+`apply_kip_config` (a real `applicationData` write), and `read_kip_config` to confirm it
+persisted. The container is torn down at the end. CI runs this as a separate `e2e` job, kept
+apart from the main gate so a slow image pull doesn't block it.
+
 ## Quickest look: the MCP Inspector
 
 The fastest way to see what the server exposes, with no AI client:

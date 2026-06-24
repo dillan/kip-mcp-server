@@ -1,0 +1,7 @@
+# Signal K server for the end-to-end test, preloaded with a known admin user
+# (e2e / e2epass) so the test can log in and write KIP config. These credentials
+# are for the throwaway test container only — never use them anywhere real.
+# Pinned by digest (signalk-server 2.28.0, multi-arch) so the e2e tests this
+# repo's code, not whatever `latest` resolves to on a given day. Bump deliberately.
+FROM signalk/signalk-server@sha256:9a2cee3181298c1d2135b86dea0da0e88a46d5f7de1180e603732d982c07c6eb
+COPY --chown=node:node signalk/security.json /home/node/.signalk/security.json

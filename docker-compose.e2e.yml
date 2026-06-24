@@ -1,0 +1,12 @@
+# A throwaway Signal K server for the end-to-end test (scripts/e2e.mjs).
+# Preloaded with a known admin user (see tests/e2e/) so the test can log in,
+# read vessel data, and write KIP config. NOT for any real deployment.
+services:
+  signalk:
+    build:
+      context: ./tests/e2e
+      dockerfile: Dockerfile.e2e
+    ports:
+      - '3456:3000'
+    environment:
+      - IS_IN_DOCKER=true

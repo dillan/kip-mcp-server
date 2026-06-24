@@ -126,7 +126,11 @@ export class KipMCPServer {
   private registerTools(): void {
     const groups: Array<{
       specs: ToolSpec[];
-      run: (name: string, args: Record<string, unknown>, ctx?: ToolCtx) => unknown | Promise<unknown>;
+      run: (
+        name: string,
+        args: Record<string, unknown>,
+        ctx?: ToolCtx,
+      ) => unknown | Promise<unknown>;
     }> = [
       {
         specs: VOCAB_TOOL_SPECS,

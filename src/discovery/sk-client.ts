@@ -83,8 +83,14 @@ export class SkClient {
       }>;
       if (!Array.isArray(body)) return [];
       return body
-        .filter((p): p is { id: string; enabled?: boolean; version?: string } => typeof p.id === 'string')
-        .map((p) => (p.version ? { id: p.id, enabled: p.enabled === true, version: p.version } : { id: p.id, enabled: p.enabled === true }));
+        .filter(
+          (p): p is { id: string; enabled?: boolean; version?: string } => typeof p.id === 'string',
+        )
+        .map((p) =>
+          p.version
+            ? { id: p.id, enabled: p.enabled === true, version: p.version }
+            : { id: p.id, enabled: p.enabled === true },
+        );
     } catch {
       return [];
     }

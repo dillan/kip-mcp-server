@@ -31,7 +31,10 @@ function checkUnit(value: unknown, measures: Set<string>, where: string, warning
 }
 
 /** Validates a dashboard's structure against the schema. */
-export function validateDashboard(dashboard: unknown, schema: KipDashboardSchema): ValidationResult {
+export function validateDashboard(
+  dashboard: unknown,
+  schema: KipDashboardSchema,
+): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
 
@@ -39,7 +42,9 @@ export function validateDashboard(dashboard: unknown, schema: KipDashboardSchema
   const columns = schema.designSystem.grid.column;
   const colorTokens = new Set(schema.designSystem.colors.map((c) => c.value));
   const icons = new Set(schema.designSystem.icons);
-  const measures = new Set(schema.designSystem.unitGroups.flatMap((g) => g.measures.map((m) => m.measure)));
+  const measures = new Set(
+    schema.designSystem.unitGroups.flatMap((g) => g.measures.map((m) => m.measure)),
+  );
   measures.add('unitless');
 
   if (!dashboard || typeof dashboard !== 'object') {
@@ -91,14 +96,19 @@ export function validateDashboard(dashboard: unknown, schema: KipDashboardSchema
       const w = node.w as number;
       const h = node.h as number;
       if (x < 0 || y < 0) errors.push(`${where}: x and y must be >= 0`);
-      if (x + w > columns) errors.push(`${where}: x+w (${x + w}) exceeds the ${columns}-column grid`);
+      if (x + w > columns)
+        errors.push(`${where}: x+w (${x + w}) exceeds the ${columns}-column grid`);
       rects.push({ id: String(node.id), x, y, w, h });
     }
 
     const config = wp.config;
     if (config && typeof config === 'object') {
       const cfg = config as Record<string, unknown>;
-      if (typeof cfg.color === 'string' && !cfg.color.startsWith('#') && !colorTokens.has(cfg.color)) {
+      if (
+        typeof cfg.color === 'string' &&
+        !cfg.color.startsWith('#') &&
+        !colorTokens.has(cfg.color)
+      ) {
         warnings.push(`${where}: colour "${cfg.color}" is not a known token`);
       }
       checkUnit(cfg.convertUnitTo, measures, where, warnings);

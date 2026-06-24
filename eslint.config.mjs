@@ -1,4 +1,5 @@
 import js from '@eslint/js';
+import eslintConfigPrettier from 'eslint-config-prettier';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
@@ -31,4 +32,6 @@ export default tseslint.config(
       ],
     },
   },
+  // Must be last: turns off ESLint rules that would conflict with Prettier.
+  eslintConfigPrettier,
 );

@@ -11,7 +11,12 @@ const self = JSON.parse(
   readFileSync(new URL('./discovery/fixtures/sailboat-self.json', import.meta.url), 'utf8'),
 ) as Record<string, unknown>;
 const inventory = flattenVesselData(self);
-const ctx: ResolveContext = { schema, inventory, plugins: [], capabilities: deriveCapabilities(inventory) };
+const ctx: ResolveContext = {
+  schema,
+  inventory,
+  plugins: [],
+  capabilities: deriveCapabilities(inventory),
+};
 
 let counter = 0;
 const uuid = (): string => `u${(counter += 1)}`;
@@ -43,7 +48,11 @@ function makeNode(o: NodeOpts = {}): unknown {
     id,
     selector: o.selector ?? 'widget-host2',
     input: {
-      widgetProperties: { type: o.type ?? 'widget-numeric', uuid: o.uuid ?? id, config: o.config ?? {} },
+      widgetProperties: {
+        type: o.type ?? 'widget-numeric',
+        uuid: o.uuid ?? id,
+        config: o.config ?? {},
+      },
     },
   };
 }
@@ -71,7 +80,11 @@ describe('validateDashboard', () => {
       id: 'dc',
       w: 8,
       h: 12,
-      config: { datachartPath: 'self.environment.wind.speedTrue', convertUnitTo: 'knots', invertData: true },
+      config: {
+        datachartPath: 'self.environment.wind.speedTrue',
+        convertUnitTo: 'knots',
+        invertData: true,
+      },
     });
     expect(validateDashboard(dash([node]), schema).errors).toEqual([]);
   });

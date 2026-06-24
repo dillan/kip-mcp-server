@@ -39,7 +39,10 @@ export class SkAppDataClient {
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
       const token = this.getToken ? await this.getToken() : this.token;
-      const headers: Record<string, string> = { 'content-type': 'application/json', ...(init.headers as Record<string, string>) };
+      const headers: Record<string, string> = {
+        'content-type': 'application/json',
+        ...(init.headers as Record<string, string>),
+      };
       if (token) headers.authorization = `JWT ${token}`;
       const response = await this.fetchImpl(url, { ...init, headers, signal: controller.signal });
       if (response.status === 401 || response.status === 403) {
@@ -55,8 +58,14 @@ export class SkAppDataClient {
   }
 
   /** Returns the stored config, or null when it does not exist (404). */
-  async getConfig(scope: string, configName: string, fileVersion: number): Promise<KipConfig | null> {
-    const response = await this.request(this.configUrl(scope, fileVersion, configName), { method: 'GET' });
+  async getConfig(
+    scope: string,
+    configName: string,
+    fileVersion: number,
+  ): Promise<KipConfig | null> {
+    const response = await this.request(this.configUrl(scope, fileVersion, configName), {
+      method: 'GET',
+    });
     if (response.status === 404) return null;
     if (!response.ok) throw new Error(`Failed to read config (HTTP ${response.status}).`);
     return (await response.json()) as KipConfig;
@@ -64,14 +73,21 @@ export class SkAppDataClient {
 
   /** Lists the config names stored for a scope. */
   async listConfigNames(scope: string, fileVersion: number): Promise<string[]> {
-    const response = await this.request(`${this.base}${scope}/kip/${fileVersion}/?keys=true`, { method: 'GET' });
+    const response = await this.request(`${this.base}${scope}/kip/${fileVersion}/?keys=true`, {
+      method: 'GET',
+    });
     if (!response.ok) return [];
     const body = (await response.json()) as unknown;
     return Array.isArray(body) ? body.filter((x): x is string => typeof x === 'string') : [];
   }
 
   /** Writes a full config (creates or replaces). */
-  async postFull(scope: string, configName: string, fileVersion: number, config: unknown): Promise<void> {
+  async postFull(
+    scope: string,
+    configName: string,
+    fileVersion: number,
+    config: unknown,
+  ): Promise<void> {
     const response = await this.request(this.configUrl(scope, fileVersion, configName), {
       method: 'POST',
       body: JSON.stringify(config),
@@ -80,7 +96,12 @@ export class SkAppDataClient {
   }
 
   /** Replaces just the dashboards array via JSON Patch. */
-  async patchDashboards(scope: string, configName: string, fileVersion: number, dashboards: unknown): Promise<void> {
+  async patchDashboards(
+    scope: string,
+    configName: string,
+    fileVersion: number,
+    dashboards: unknown,
+  ): Promise<void> {
     const patch = [{ op: 'replace', path: `/${configName}/dashboards`, value: dashboards }];
     const response = await this.request(this.patchUrl(scope, fileVersion), {
       method: 'POST',

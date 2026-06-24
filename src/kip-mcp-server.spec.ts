@@ -196,7 +196,9 @@ describe('logging', () => {
     expect(connected.getServerCapabilities()?.logging).toBeDefined();
     await connected.callTool({ name: 'list_kip_widgets', arguments: {} });
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(logs.some((l) => l.level === 'warning' && String(l.data).includes('bundled'))).toBe(true);
+    expect(logs.some((l) => l.level === 'warning' && String(l.data).includes('bundled'))).toBe(
+      true,
+    );
     await connected.close();
   });
 });
@@ -226,7 +228,10 @@ describe('elicitation for apply_kip_config', () => {
 
   it('writes when the user accepts the confirmation', async () => {
     const methods: string[] = [];
-    const appData = new SkAppDataClient({ baseUrl: 'http://boat:3000', fetchImpl: recordingAppFetch(methods) });
+    const appData = new SkAppDataClient({
+      baseUrl: 'http://boat:3000',
+      fetchImpl: recordingAppFetch(methods),
+    });
     const { client, seen } = elicitingClient({ action: 'accept', content: { confirm: true } });
     const connected = await connectWith({ sk: skVersion('2.13.0'), appData }, client);
     const result = await connected.callTool({
@@ -242,7 +247,10 @@ describe('elicitation for apply_kip_config', () => {
 
   it('stays a dry run when the user declines', async () => {
     const methods: string[] = [];
-    const appData = new SkAppDataClient({ baseUrl: 'http://boat:3000', fetchImpl: recordingAppFetch(methods) });
+    const appData = new SkAppDataClient({
+      baseUrl: 'http://boat:3000',
+      fetchImpl: recordingAppFetch(methods),
+    });
     const { client } = elicitingClient({ action: 'decline' });
     const connected = await connectWith({ sk: skVersion('2.13.0'), appData }, client);
     const result = await connected.callTool({
@@ -256,7 +264,10 @@ describe('elicitation for apply_kip_config', () => {
 
   it('falls back to a dry run (no throw) when the client cannot elicit', async () => {
     const methods: string[] = [];
-    const appData = new SkAppDataClient({ baseUrl: 'http://boat:3000', fetchImpl: recordingAppFetch(methods) });
+    const appData = new SkAppDataClient({
+      baseUrl: 'http://boat:3000',
+      fetchImpl: recordingAppFetch(methods),
+    });
     const connected = await connectWith({ sk: skVersion('2.13.0'), appData });
     const result = await connected.callTool({
       name: 'apply_kip_config',
@@ -269,7 +280,10 @@ describe('elicitation for apply_kip_config', () => {
 
   it('stays a dry run when the user accepts the form but answers no', async () => {
     const methods: string[] = [];
-    const appData = new SkAppDataClient({ baseUrl: 'http://boat:3000', fetchImpl: recordingAppFetch(methods) });
+    const appData = new SkAppDataClient({
+      baseUrl: 'http://boat:3000',
+      fetchImpl: recordingAppFetch(methods),
+    });
     const { client } = elicitingClient({ action: 'accept', content: { confirm: false } });
     const connected = await connectWith({ sk: skVersion('2.13.0'), appData }, client);
     const result = await connected.callTool({
@@ -283,7 +297,10 @@ describe('elicitation for apply_kip_config', () => {
 
   it('degrades to a dry run (no error) when elicitation fails on the client', async () => {
     const methods: string[] = [];
-    const appData = new SkAppDataClient({ baseUrl: 'http://boat:3000', fetchImpl: recordingAppFetch(methods) });
+    const appData = new SkAppDataClient({
+      baseUrl: 'http://boat:3000',
+      fetchImpl: recordingAppFetch(methods),
+    });
     // Declares form support but registers no elicitation handler, so the request rejects.
     const client = new Client(
       { name: 'broken-elicit-client', version: '0.0.0' },
@@ -308,7 +325,10 @@ describe('progress notifications', () => {
   };
 
   it('apply_kip_config reports progress when a progressToken is supplied', async () => {
-    const appData = new SkAppDataClient({ baseUrl: 'http://boat:3000', fetchImpl: recordingAppFetch([]) });
+    const appData = new SkAppDataClient({
+      baseUrl: 'http://boat:3000',
+      fetchImpl: recordingAppFetch([]),
+    });
     const connected = await connectWith({ sk: skVersion('2.13.0'), appData });
     const events: Array<{ progress: number; total?: number }> = [];
     await connected.callTool(
@@ -346,12 +366,18 @@ describe('progress notifications', () => {
 
   it('reports the apply write-path sequence 0 -> 2 -> 3 when it actually writes', async () => {
     const methods: string[] = [];
-    const appData = new SkAppDataClient({ baseUrl: 'http://boat:3000', fetchImpl: recordingAppFetch(methods) });
+    const appData = new SkAppDataClient({
+      baseUrl: 'http://boat:3000',
+      fetchImpl: recordingAppFetch(methods),
+    });
     const connected = await connectWith({ sk: skVersion('2.13.0'), appData });
     const events: Array<{ progress: number; total?: number }> = [];
     // confirm:true skips elicitation and takes the write branch.
     await connected.callTool(
-      { name: 'apply_kip_config', arguments: { dashboards: [sampleDashboard], dryRun: false, confirm: true } },
+      {
+        name: 'apply_kip_config',
+        arguments: { dashboards: [sampleDashboard], dryRun: false, confirm: true },
+      },
       undefined,
       { onprogress: (p) => events.push(p) },
     );
@@ -362,7 +388,10 @@ describe('progress notifications', () => {
   });
 
   it('emits no progress and does not error when no progressToken is supplied', async () => {
-    const appData = new SkAppDataClient({ baseUrl: 'http://boat:3000', fetchImpl: recordingAppFetch([]) });
+    const appData = new SkAppDataClient({
+      baseUrl: 'http://boat:3000',
+      fetchImpl: recordingAppFetch([]),
+    });
     const connected = await connectWith({ sk: skVersion('2.13.0'), appData });
     const result = await connected.callTool({
       name: 'apply_kip_config',

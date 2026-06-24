@@ -24,7 +24,8 @@ export const WRITE_TOOL_SPECS: ToolSpec[] = [
   {
     name: 'read_kip_config',
     title: 'Read KIP config',
-    description: 'Read the KIP config stored on the Signal K server, and list the available config names.',
+    description:
+      'Read the KIP config stored on the Signal K server, and list the available config names.',
     inputSchema: {
       scope: z.enum(SCOPE_ENUM).optional(),
       configName: z.string().optional(),
@@ -40,7 +41,8 @@ export const WRITE_TOOL_SPECS: ToolSpec[] = [
   {
     name: 'backup_kip_config',
     title: 'Back up KIP config',
-    description: 'Return the current stored KIP config so it can be kept as a backup before changes.',
+    description:
+      'Return the current stored KIP config so it can be kept as a backup before changes.',
     inputSchema: {
       scope: z.enum(SCOPE_ENUM).optional(),
       configName: z.string().optional(),

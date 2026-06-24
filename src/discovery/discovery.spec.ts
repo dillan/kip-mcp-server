@@ -11,7 +11,8 @@ function fakeFetch(routes: Record<string, { status?: number; body: unknown }>): 
   return (async (url: unknown) => {
     const u = String(url);
     for (const [path, route] of Object.entries(routes)) {
-      if (u.endsWith(path)) return new Response(JSON.stringify(route.body), { status: route.status ?? 200 });
+      if (u.endsWith(path))
+        return new Response(JSON.stringify(route.body), { status: route.status ?? 200 });
     }
     return new Response('not found', { status: 404 });
   }) as unknown as typeof fetch;
@@ -31,7 +32,10 @@ const sk = new SkClient({ baseUrl: 'http://boat.local:3000', fetchImpl });
 
 describe('SkClient', () => {
   it('reads server info', async () => {
-    expect(await sk.getServerInfo()).toEqual({ version: '2.13.0', serverId: 'signalk-server-node' });
+    expect(await sk.getServerInfo()).toEqual({
+      version: '2.13.0',
+      serverId: 'signalk-server-node',
+    });
   });
 
   it('sends a JWT auth header when a token is set', async () => {

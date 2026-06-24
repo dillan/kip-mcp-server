@@ -34,7 +34,8 @@ export const DISCOVERY_TOOL_SPECS: ToolSpec[] = [
   {
     name: 'list_available_paths',
     title: 'List available paths',
-    description: 'List the Signal K data paths available on the boat, optionally filtered by prefix.',
+    description:
+      'List the Signal K data paths available on the boat, optionally filtered by prefix.',
     inputSchema: {
       prefix: z.string().optional().describe('Only list paths starting with this prefix.'),
     },
@@ -44,7 +45,8 @@ export const DISCOVERY_TOOL_SPECS: ToolSpec[] = [
   {
     name: 'get_path_meta',
     title: 'Get path metadata',
-    description: 'Get metadata (units, description, value type, zones) for specific Signal K paths.',
+    description:
+      'Get metadata (units, description, value type, zones) for specific Signal K paths.',
     inputSchema: { paths: z.array(z.string()).describe('Paths to describe.') },
     outputSchema: { meta: z.array(kipObject) },
     annotations: READ_ONLY_REMOTE,

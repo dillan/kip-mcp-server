@@ -27,14 +27,17 @@ const bundledSchema = async (): Promise<LoadResult> => ({
   warning: 'Could not reach KIP; using the bundled schema for KIP 4.8.0',
 });
 
-const okSk = (): SkClient => skWith(() => ({ status: 200, body: { server: { version: '2.13.0' } } }));
+const okSk = (): SkClient =>
+  skWith(() => ({ status: 200, body: { server: { version: '2.13.0' } } }));
 
 function deps(overrides: Partial<DoctorDeps>): DoctorDeps {
   return { config: baseConfig, sk: okSk(), loadSchema: remoteSchema, ...overrides };
 }
 
-const sev = (report: { checks: { id: string; severity: string }[] }, id: string): string | undefined =>
-  report.checks.find((c) => c.id === id)?.severity;
+const sev = (
+  report: { checks: { id: string; severity: string }[] },
+  id: string,
+): string | undefined => report.checks.find((c) => c.id === id)?.severity;
 
 describe('runDoctor', () => {
   it('reports all green when server, version, schema and anonymous access are fine', async () => {

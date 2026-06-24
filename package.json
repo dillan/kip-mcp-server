@@ -22,13 +22,24 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:unit": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
     "smoke": "node scripts/smoke.mjs",
     "schema:refresh": "node scripts/refresh-schema.mjs",
-    "ci": "npm run typecheck && npm run lint && npm run build && npm run test:coverage && npm run smoke",
+    "ci": "npm run format:check && npm run typecheck && npm run lint && npm run build && npm run test:coverage && npm run smoke",
     "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,mjs,js}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
   },
   "keywords": [
     "signalk",
@@ -60,8 +71,11 @@
     "@types/lodash": "^4.17.24",
     "@types/node": "^26.0.0",
     "eslint": "^10.5.0",
+    "eslint-config-prettier": "^10.1.8",
     "husky": "^9.1.7",
     "jest": "^30.4.2",
+    "lint-staged": "^17.0.8",
+    "prettier": "^3.8.4",
     "semantic-release": "^25.0.5",
     "ts-jest": "^29.4.11",
     "typescript": "^6.0.3",

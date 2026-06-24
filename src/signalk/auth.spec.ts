@@ -1,9 +1,6 @@
 import { signalkLogin, TokenProvider } from './auth.js';
 
-const captureFetch = (
-  token: string,
-  capture: { url?: string; init?: RequestInit },
-): typeof fetch =>
+const captureFetch = (token: string, capture: { url?: string; init?: RequestInit }): typeof fetch =>
   (async (url: unknown, init?: RequestInit) => {
     capture.url = String(url);
     capture.init = init;

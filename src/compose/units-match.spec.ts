@@ -10,7 +10,9 @@ describe('chooseConvertUnit', () => {
   });
 
   it('falls back to the slot default when the preferred unit is invalid', () => {
-    expect(chooseConvertUnit(design, 'rad', { preferred: 'bogus', slotDefault: 'deg' })).toBe('deg');
+    expect(chooseConvertUnit(design, 'rad', { preferred: 'bogus', slotDefault: 'deg' })).toBe(
+      'deg',
+    );
   });
 
   it('passes through the base unit when no preference is given', () => {

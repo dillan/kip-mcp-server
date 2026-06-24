@@ -170,7 +170,11 @@ function gate(dw: DesiredWidget, enabled: Set<string>, capabilities: Capabilitie
   if (dw.requiredPlugins && !dw.requiredPlugins.every((p) => enabled.has(p))) {
     return `missing required plugin(s): ${dw.requiredPlugins.join(', ')}`;
   }
-  if (dw.anyOfPlugins && dw.anyOfPlugins.length > 0 && !dw.anyOfPlugins.some((p) => enabled.has(p))) {
+  if (
+    dw.anyOfPlugins &&
+    dw.anyOfPlugins.length > 0 &&
+    !dw.anyOfPlugins.some((p) => enabled.has(p))
+  ) {
     return `needs one of plugins: ${dw.anyOfPlugins.join(', ')}`;
   }
   if (dw.capabilityGate && !capabilityMet(dw.capabilityGate, capabilities)) {

@@ -28,12 +28,23 @@ export interface DesiredSlot {
   preferredUnit?: string;
 }
 
+/** One control of a paths-array widget: a label and the paths that could feed it. */
+export interface DesiredControl {
+  ctrlLabel: string;
+  candidates: string[];
+  /** Override the kind; defaults from the widget selector (switch vs zones). */
+  kind?: 'switch' | 'zones';
+  type?: string;
+}
+
 export interface DesiredWidget {
   selector: string;
   color?: string;
   size?: { w: number; h: number };
   slots?: DesiredSlot[];
   dataChart?: { candidates: string[]; preferredUnit?: string };
+  /** Controls for a paths-array widget (switch / zones panels). */
+  controls?: DesiredControl[];
   requiredPlugins?: string[];
   anyOfPlugins?: string[];
   capabilityGate?: CapabilityGate;

@@ -68,3 +68,76 @@ describe('resolveTemplate', () => {
     expect(result.dropped.length).toBeGreaterThan(0);
   });
 });
+
+describe('resolveTemplate paths-array controls', () => {
+  const switchPath = {
+    path: 'electrical.switches.nav.state',
+    skUnit: null,
+    description: null,
+    displayName: null,
+    hasZones: false,
+    pathType: 'boolean',
+    sampleValue: false,
+    sourceCount: 1,
+  };
+
+  it('resolves a paths-array control to a self-prefixed path', () => {
+    const tmpl: DashboardTemplate = {
+      id: 'x',
+      name: 'X',
+      icon: 'dashboard-dashboard',
+      widgets: [
+        {
+          selector: 'widget-boolean-switch',
+          controls: [{ ctrlLabel: 'Nav', candidates: ['electrical.switches.nav.state'] }],
+        },
+      ],
+    };
+    const localCtx: ResolveContext = {
+      schema,
+      inventory: [switchPath],
+      plugins: [],
+      capabilities: deriveCapabilities([]),
+    };
+    const result = resolveTemplate(tmpl, localCtx);
+    expect(result.satisfied).toHaveLength(1);
+    expect(result.satisfied[0].pathControls).toEqual([
+      { ctrlLabel: 'Nav', path: 'self.electrical.switches.nav.state', kind: 'switch' },
+    ]);
+  });
+
+  it('drops a paths-array widget when no control candidate has data', () => {
+    const tmpl: DashboardTemplate = {
+      id: 'x',
+      name: 'X',
+      icon: 'dashboard-dashboard',
+      widgets: [
+        {
+          selector: 'widget-boolean-switch',
+          controls: [{ ctrlLabel: 'Nav', candidates: ['electrical.switches.missing.state'] }],
+        },
+      ],
+    };
+    const localCtx: ResolveContext = {
+      schema,
+      inventory: [],
+      plugins: [],
+      capabilities: deriveCapabilities([]),
+    };
+    const result = resolveTemplate(tmpl, localCtx);
+    expect(result.satisfied).toHaveLength(0);
+    expect(result.dropped.map((d) => d.selector)).toContain('widget-boolean-switch');
+  });
+
+  it('drops a paths-array widget that defines no controls (no empty panels)', () => {
+    const tmpl: DashboardTemplate = {
+      id: 'x',
+      name: 'X',
+      icon: 'dashboard-dashboard',
+      widgets: [{ selector: 'widget-boolean-switch' }],
+    };
+    const result = resolveTemplate(tmpl, ctx);
+    expect(result.satisfied).toHaveLength(0);
+    expect(result.dropped.map((d) => d.selector)).toContain('widget-boolean-switch');
+  });
+});

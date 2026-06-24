@@ -94,3 +94,55 @@ describe('previewSvg', () => {
     expect(svg.startsWith('<svg')).toBe(true);
   });
 });
+
+describe('composeDashboard paths-array', () => {
+  it('threads paths-array controls into linked, index-aligned config arrays', () => {
+    counter = 0;
+    const localCtx: ResolveContext = {
+      schema,
+      inventory: ['electrical.switches.nav.state', 'electrical.switches.anchor.state'].map(
+        (path) => ({
+          path,
+          skUnit: null,
+          description: null,
+          displayName: null,
+          hasZones: false,
+          pathType: 'boolean',
+          sampleValue: false,
+          sourceCount: 1,
+        }),
+      ),
+      plugins: [],
+      capabilities: deriveCapabilities([]),
+    };
+    const tmpl: DashboardTemplate = {
+      id: 'switches',
+      name: 'Switches',
+      icon: 'dashboard-dashboard',
+      widgets: [
+        {
+          selector: 'widget-boolean-switch',
+          controls: [
+            { ctrlLabel: 'Nav', candidates: ['electrical.switches.nav.state'] },
+            { ctrlLabel: 'Anchor', candidates: ['electrical.switches.anchor.state'] },
+            { ctrlLabel: 'Missing', candidates: ['electrical.switches.absent.state'] },
+          ],
+        },
+      ],
+    };
+    const { dashboard } = composeDashboard(tmpl, localCtx, uuid);
+    expect(dashboard.configuration).toHaveLength(1);
+    const cfg = dashboard.configuration[0].input.widgetProperties.config as unknown as {
+      paths: Array<{ path: string; pathID: string }>;
+      multiChildCtrls: Array<{ pathID: string }>;
+    };
+    // 2 of 3 controls have data; the missing one is left out
+    expect(cfg.paths.map((p) => p.path)).toEqual([
+      'self.electrical.switches.nav.state',
+      'self.electrical.switches.anchor.state',
+    ]);
+    // index-aligned, shared pathIDs, all unique
+    expect(cfg.paths.map((p) => p.pathID)).toEqual(cfg.multiChildCtrls.map((c) => c.pathID));
+    expect(new Set(cfg.paths.map((p) => p.pathID)).size).toBe(2);
+  });
+});

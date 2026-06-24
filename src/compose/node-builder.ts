@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import lodash from 'lodash';
 import type { WidgetSchemaEntry } from '../schema/schema-types.js';
 
@@ -14,6 +15,24 @@ export interface SlotBinding {
   pathSkUnitsFilter?: string | null;
 }
 
+/**
+ * One control of a `paths-array` widget (a switch or zones panel). KIP links a
+ * control to its data path by a shared `pathID`, and observes the stream by the
+ * path entry's array index, so the builder emits the two arrays in lockstep.
+ */
+export interface PathsArrayControl {
+  ctrlLabel: string;
+  /** Signal K path, self-prefixed (e.g. `self.electrical.switches.nav.state`). */
+  path: string;
+  kind: 'switch' | 'zones';
+  source?: string | null;
+  /** Control type code: '1' toggle / '3' indicator for a switch, '4' for zones. */
+  type?: string;
+  color?: string;
+  pathSkUnitsFilter?: string | null;
+  convertUnitTo?: string | null;
+}
+
 export interface BuildWidgetInput {
   widget: WidgetSchemaEntry;
   /** Stable id; the GridStack node id and widgetProperties.uuid are both set to this. */
@@ -24,6 +43,10 @@ export interface BuildWidgetInput {
   bindings?: SlotBinding[];
   /** Top-level chart binding for a `datachart` widget. */
   dataChart?: { path: string; source?: string | null; convertUnitTo?: string | null };
+  /** Controls for a `paths-array` widget (switch / zones panels). */
+  pathControls?: PathsArrayControl[];
+  /** Id generator for the per-control pathIDs (defaults to crypto.randomUUID). */
+  genId?: () => string;
   /** Extra config to merge over the widget's default config. */
   configOverrides?: Record<string, unknown>;
 }
@@ -71,6 +94,44 @@ export function buildWidgetNode(input: BuildWidgetInput): GridNode {
     config.datachartPath = input.dataChart.path;
     if (input.dataChart.source != null) config.datachartSource = input.dataChart.source;
     if (input.dataChart.convertUnitTo != null) config.convertUnitTo = input.dataChart.convertUnitTo;
+  }
+
+  if (input.widget.bindingKind === 'paths-array' && input.pathControls) {
+    // KIP links each control to its path entry by a shared pathID and observes the
+    // stream by the path's array index, so push to both arrays in lockstep. Assign
+    // the arrays (don't merge — lodash merges arrays by index).
+    const genId = input.genId ?? randomUUID;
+    const paths: Record<string, unknown>[] = [];
+    const ctrls: Record<string, unknown>[] = [];
+    for (const control of input.pathControls) {
+      const pathID = genId();
+      const zones = control.kind === 'zones';
+      paths.push({
+        description: control.ctrlLabel,
+        path: control.path,
+        source: control.source ?? 'default',
+        pathType: zones ? 'number' : 'boolean',
+        zonesOnlyPaths: zones,
+        supportsPut: !zones,
+        isPathConfigurable: true,
+        showPathSkUnitsFilter: false,
+        pathSkUnitsFilter: control.pathSkUnitsFilter ?? null,
+        convertUnitTo: control.convertUnitTo ?? null,
+        sampleTime: 500,
+        pathID,
+      });
+      ctrls.push({
+        ctrlLabel: control.ctrlLabel,
+        // Zones panels only render type '4'; never let an override decouple type from kind.
+        type: zones ? '4' : (control.type ?? '1'),
+        pathID,
+        color: control.color ?? 'contrast',
+        isNumeric: zones,
+        value: null,
+      });
+    }
+    config.paths = paths;
+    config.multiChildCtrls = ctrls;
   }
 
   if (input.color) config.color = input.color;

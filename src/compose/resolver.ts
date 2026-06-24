@@ -1,7 +1,7 @@
 import type { Capabilities, PathInfo } from '../discovery/inventory.js';
 import type { PluginInfo } from '../discovery/sk-client.js';
 import type { KipDashboardSchema, WidgetSchemaEntry } from '../schema/schema-types.js';
-import type { SlotBinding } from './node-builder.js';
+import type { PathsArrayControl, SlotBinding } from './node-builder.js';
 import type { CapabilityGate, DashboardTemplate, DesiredWidget } from './templates.js';
 import { chooseConvertUnit } from './units-match.js';
 
@@ -10,6 +10,7 @@ export interface ResolvedWidget {
   widget: WidgetSchemaEntry;
   bindings: SlotBinding[];
   dataChart?: { path: string; source?: string | null; convertUnitTo?: string | null };
+  pathControls?: PathsArrayControl[];
   color?: string;
   size?: { w: number; h: number };
   group?: string;
@@ -145,6 +146,30 @@ export function resolveTemplate(template: DashboardTemplate, ctx: ResolveContext
       }
     }
 
+    let pathControls: ResolvedWidget['pathControls'];
+    if (!unsatisfied && widget.bindingKind === 'paths-array') {
+      const defaultKind = widget.selector === 'widget-zones-state-panel' ? 'zones' : 'switch';
+      const resolved: PathsArrayControl[] = [];
+      for (const control of dw.controls ?? []) {
+        const bare = control.candidates.find((c) => byPath.has(c));
+        if (!bare) continue; // a control with no data is simply left out of the panel
+        resolved.push({
+          ctrlLabel: control.ctrlLabel,
+          path: `self.${bare}`,
+          kind: control.kind ?? defaultKind,
+          ...(control.type ? { type: control.type } : {}),
+        });
+      }
+      // Drop an empty panel: no controls defined, or none of them had data.
+      if (resolved.length === 0) {
+        unsatisfied = dw.controls?.length
+          ? 'no data for any switch/zones control'
+          : 'paths-array widget has no controls';
+      } else {
+        pathControls = resolved;
+      }
+    }
+
     if (unsatisfied) {
       dropped.push({ selector: dw.selector, reason: unsatisfied });
       continue;
@@ -155,6 +180,7 @@ export function resolveTemplate(template: DashboardTemplate, ctx: ResolveContext
       widget,
       bindings,
       ...(dataChart ? { dataChart } : {}),
+      ...(pathControls ? { pathControls } : {}),
       ...(dw.color ? { color: dw.color } : {}),
       ...(dw.size ? { size: dw.size } : {}),
       ...(dw.group ? { group: dw.group } : {}),

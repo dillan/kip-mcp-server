@@ -4,7 +4,7 @@
  * diagnostics when invoked with `--doctor`.
  */
 import * as dotenv from 'dotenv';
-import { loadConfig } from './config.js';
+import { describeConfig, loadConfig } from './config.js';
 import { SkClient } from './discovery/sk-client.js';
 import { formatDoctorReport, runDoctor } from './doctor.js';
 import { KipMCPServer } from './kip-mcp-server.js';
@@ -17,27 +17,36 @@ process.on('unhandledRejection', (reason) => {
   console.error('[kip-mcp-server] Unhandled rejection:', reason);
 });
 
+/** Prints a clear message and exits — used for config errors and startup failures. */
+function fail(error: unknown): never {
+  console.error(`[kip-mcp-server] ${error instanceof Error ? error.message : String(error)}`);
+  process.exit(1);
+}
+
 if (process.argv.slice(2).includes('--doctor')) {
-  const config = loadConfig();
-  const tokens = new TokenProvider({
-    baseUrl: config.signalkBaseUrl,
-    token: config.token,
-    credentials: config.credentials,
-  });
-  const sk = new SkClient({ baseUrl: config.signalkBaseUrl, getToken: () => tokens.get() });
-  runDoctor({ config, sk, loadSchema: () => loadKipSchema({ baseUrl: config.kipBaseUrl }) })
-    .then((report) => {
-      console.log(formatDoctorReport(report));
-      process.exit(report.ok ? 0 : 1);
-    })
-    .catch((error: unknown) => {
-      console.error('[kip-mcp-server] Doctor failed:', error);
-      process.exit(1);
+  try {
+    const config = loadConfig();
+    const tokens = new TokenProvider({
+      baseUrl: config.signalkBaseUrl,
+      token: config.token,
+      credentials: config.credentials,
     });
+    const sk = new SkClient({ baseUrl: config.signalkBaseUrl, getToken: () => tokens.get() });
+    runDoctor({ config, sk, loadSchema: () => loadKipSchema({ baseUrl: config.kipBaseUrl }) })
+      .then((report) => {
+        console.log(formatDoctorReport(report));
+        process.exit(report.ok ? 0 : 1);
+      })
+      .catch(fail);
+  } catch (error) {
+    fail(error);
+  }
 } else {
-  const server = new KipMCPServer();
-  server.run().catch((error: unknown) => {
-    console.error('[kip-mcp-server] Failed to start:', error);
-    process.exit(1);
-  });
+  try {
+    const config = loadConfig();
+    console.error(`[kip-mcp-server] ${describeConfig(config)}`);
+    new KipMCPServer().run().catch(fail);
+  } catch (error) {
+    fail(error);
+  }
 }

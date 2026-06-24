@@ -57,4 +57,29 @@ describe('TokenProvider', () => {
     expect(await provider.get()).toBe('jwt-2');
     expect(calls).toBe(1);
   });
+
+  it('re-logs in and returns a fresh token when forceRefresh is set', async () => {
+    const issued = ['jwt-old', 'jwt-new'];
+    let calls = 0;
+    const fetchImpl = (async () => {
+      const token = issued[calls] ?? issued[issued.length - 1];
+      calls += 1;
+      return new Response(JSON.stringify({ token }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const provider = new TokenProvider({
+      baseUrl: 'http://boat:3000',
+      credentials: { username: 'u', password: 'p' },
+      fetchImpl,
+    });
+    expect(await provider.get()).toBe('jwt-old');
+    expect(await provider.get()).toBe('jwt-old'); // cached, no new login
+    expect(await provider.get({ forceRefresh: true })).toBe('jwt-new'); // re-login
+    expect(await provider.get()).toBe('jwt-new'); // fresh token now cached
+    expect(calls).toBe(2);
+  });
+
+  it('cannot refresh a static token: forceRefresh returns it unchanged', async () => {
+    const provider = new TokenProvider({ baseUrl: 'http://boat:3000', token: 'static-1' });
+    expect(await provider.get({ forceRefresh: true })).toBe('static-1');
+  });
 });

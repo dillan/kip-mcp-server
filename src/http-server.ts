@@ -84,14 +84,15 @@ function readBody(req: http.IncomingMessage): Promise<string> {
 export async function startHttpServer(config: HttpServerConfig): Promise<RunningHttpServer> {
   // Reuse the same env-driven Signal K / KIP config the stdio server uses.
   const base = loadConfig();
-  // One token source, shared by every per-session server, so a username/password
-  // login happens at most once (mirrors the single TokenProvider in KipMCPServer).
+  // One token source, shared by every per-session server (mirrors the single
+  // TokenProvider in KipMCPServer): a username/password login runs once per token
+  // lifetime and is re-authenticated on demand when a request is rejected (401/403).
   const tokens = new TokenProvider({
     baseUrl: base.signalkBaseUrl,
     token: base.token,
     credentials: base.credentials,
   });
-  const getToken = () => tokens.get();
+  const getToken = (opts?: { forceRefresh?: boolean }) => tokens.get(opts);
   const sk = new SkClient({ baseUrl: base.signalkBaseUrl, getToken });
   const appData = new SkAppDataClient({ baseUrl: base.signalkBaseUrl, getToken });
 

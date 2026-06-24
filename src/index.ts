@@ -31,7 +31,10 @@ if (process.argv.slice(2).includes('--doctor')) {
       token: config.token,
       credentials: config.credentials,
     });
-    const sk = new SkClient({ baseUrl: config.signalkBaseUrl, getToken: () => tokens.get() });
+    const sk = new SkClient({
+      baseUrl: config.signalkBaseUrl,
+      getToken: (opts?: { forceRefresh?: boolean }) => tokens.get(opts),
+    });
     runDoctor({ config, sk, loadSchema: () => loadKipSchema({ baseUrl: config.kipBaseUrl }) })
       .then((report) => {
         console.log(formatDoctorReport(report));

@@ -1,5 +1,6 @@
 // Built-artifact smoke test: spawn the compiled stdio server and exercise it over
 // MCP, exactly as a real client (Claude Desktop, Codex, ...) would.
+import { spawnSync } from 'node:child_process';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
@@ -33,7 +34,15 @@ try {
     throw new Error('expected the design_dashboards prompt to be listed');
   }
   await client.close();
-  console.log(`SMOKE OK — ${names.length} tools, ${prompts.length} prompts: ${names.join(', ')}`);
+
+  // The --doctor CLI runs diagnostics and exits without starting the stdio server.
+  const doctor = spawnSync('node', ['dist/index.js', '--doctor'], { encoding: 'utf8', timeout: 30000 });
+  const doctorOut = `${doctor.stdout ?? ''}${doctor.stderr ?? ''}`;
+  if (!doctorOut.includes('Signal K server reachable')) {
+    throw new Error(`--doctor did not print the connection checks. Output:\n${doctorOut}`);
+  }
+
+  console.log(`SMOKE OK — ${names.length} tools, ${prompts.length} prompts, --doctor runs: ${names.join(', ')}`);
   process.exit(0);
 } catch (error) {
   console.error('SMOKE FAILED:', error);

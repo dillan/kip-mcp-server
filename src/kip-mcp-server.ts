@@ -1,9 +1,10 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { callComposeTool, COMPOSE_TOOL_SPECS } from './compose-tools.js';
-import { loadConfig } from './config.js';
+import { loadConfig, type ServerConfig } from './config.js';
 import { callDiscoveryTool, DISCOVERY_TOOL_SPECS } from './discovery-tools.js';
 import { SkClient } from './discovery/sk-client.js';
+import { callDoctorTool, DOCTOR_TOOL_SPECS } from './doctor-tools.js';
 import { PROMPT_SPECS } from './prompts.js';
 import { readResourceText } from './resources.js';
 import { loadKipSchema } from './schema/kip-schema.js';
@@ -67,10 +68,12 @@ export class KipMCPServer {
   private readonly loadSchemaFn: () => Promise<SchemaResult>;
   private readonly sk: SkClient;
   private readonly appData: SkAppDataClient;
+  private readonly config: ServerConfig;
   private schema?: KipDashboardSchema;
 
   constructor(options: KipMCPServerOptions = {}) {
     const config = loadConfig();
+    this.config = config;
     this.schema = options.schema;
     this.loadSchemaFn = options.loadSchema ?? (() => loadKipSchema({ baseUrl: config.kipBaseUrl }));
     // One token source, shared by the read and write clients, so a username/
@@ -142,6 +145,14 @@ export class KipMCPServer {
         specs: WRITE_TOOL_SPECS,
         run: async (name, args, ctx) =>
           callWriteTool(await this.getSchema(), this.appData, this.sk, name, args, ctx),
+      },
+      {
+        specs: DOCTOR_TOOL_SPECS,
+        run: (name) =>
+          callDoctorTool(
+            { config: this.config, sk: this.sk, loadSchema: () => this.loadSchemaFn() },
+            name,
+          ),
       },
     ];
 

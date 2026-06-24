@@ -134,4 +134,42 @@ describe('validateAgainstSignalk', () => {
     const result = validateAgainstSignalk(schema, dash, discovery());
     expect(result.warnings.some((w) => w.includes('widget-does-not-exist'))).toBe(true);
   });
+
+  it('does not throw on a null or non-object node, and warns instead', () => {
+    const dash = dashboard(null, 'nope', numericNode('self.navigation.speedOverGround'));
+    const result = validateAgainstSignalk(
+      schema,
+      dash,
+      discovery({ paths: [pathInfo('navigation.speedOverGround', 'm/s')] }),
+    );
+    expect(result.warnings.some((w) => w.includes('not a widget node'))).toBe(true);
+    expect(result.checkedPaths).toBe(1);
+  });
+
+  it('extracts a paths-array binding (switch panel)', () => {
+    const node = widgetNode('widget-boolean-switch', {
+      paths: [{ path: 'self.electrical.switches.nav.state' }],
+    });
+    const result = validateAgainstSignalk(schema, dashboard(node), discovery());
+    expect(result.checkedPaths).toBe(1);
+    expect(result.missingPaths.map((m) => m.path)).toContain('self.electrical.switches.nav.state');
+  });
+
+  it('extracts a datachart binding (top-level datachartPath)', () => {
+    const node = widgetNode('widget-data-chart', {
+      datachartPath: 'self.environment.outside.temperature',
+    });
+    const result = validateAgainstSignalk(schema, dashboard(node), discovery());
+    expect(result.checkedPaths).toBe(1);
+    expect(result.missingPaths.map((m) => m.path)).toContain('self.environment.outside.temperature');
+  });
+
+  it("warns when none of a widget's optional (anyOf) plugins are enabled", () => {
+    const result = validateAgainstSignalk(
+      schema,
+      dashboard(widgetNode('widget-autopilot')),
+      discovery({ plugins: [] }),
+    );
+    expect(result.warnings.some((w) => w.includes('autopilot'))).toBe(true);
+  });
 });

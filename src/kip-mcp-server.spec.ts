@@ -372,3 +372,103 @@ describe('progress notifications', () => {
     await connected.close();
   });
 });
+
+describe('live validation and diagnostics (in-memory)', () => {
+  const vesselFetch = (async (url: unknown) => {
+    const u = String(url);
+    if (u.includes('/vessels/self')) {
+      return new Response(
+        JSON.stringify({ navigation: { speedOverGround: { value: 5, meta: { units: 'm/s' } } } }),
+        { status: 200 },
+      );
+    }
+    if (u.includes('/skServer/plugins')) return new Response(JSON.stringify([]), { status: 200 });
+    return new Response(JSON.stringify({ server: { version: '2.13.0' } }), { status: 200 });
+  }) as unknown as typeof fetch;
+
+  it('validate_against_signalk confirms a dashboard whose paths the boat reports', async () => {
+    const sk = new SkClient({ baseUrl: 'http://boat:3000', fetchImpl: vesselFetch });
+    const connected = await connectWith({ sk });
+    const dashboard = {
+      id: 'd1',
+      name: 'T',
+      icon: 'dashboard-dashboard',
+      configuration: [
+        {
+          w: 2,
+          h: 2,
+          x: 0,
+          y: 0,
+          id: 'u1',
+          selector: 'widget-host2',
+          input: {
+            widgetProperties: {
+              type: 'widget-numeric',
+              uuid: 'u1',
+              config: { paths: { numericPath: { path: 'self.navigation.speedOverGround' } } },
+            },
+          },
+        },
+      ],
+    };
+    const result = await connected.callTool({
+      name: 'validate_against_signalk',
+      arguments: { dashboard },
+    });
+    const structured = result.structuredContent as { ok?: boolean; checkedPaths?: number };
+    expect(structured.ok).toBe(true);
+    expect(structured.checkedPaths).toBe(1);
+    await connected.close();
+  });
+
+  it('validate_against_signalk reports problems (ok:false) through the client output schema', async () => {
+    const sk = new SkClient({ baseUrl: 'http://boat:3000', fetchImpl: vesselFetch });
+    const connected = await connectWith({ sk });
+    const dashboard = {
+      id: 'd1',
+      name: 'T',
+      icon: 'dashboard-dashboard',
+      configuration: [
+        {
+          w: 2,
+          h: 2,
+          x: 0,
+          y: 0,
+          id: 'u1',
+          selector: 'widget-host2',
+          input: {
+            widgetProperties: {
+              type: 'widget-numeric',
+              uuid: 'u1',
+              // A path the boat does not report.
+              config: { paths: { numericPath: { path: 'self.navigation.courseOverGroundTrue' } } },
+            },
+          },
+        },
+      ],
+    };
+    const result = await connected.callTool({
+      name: 'validate_against_signalk',
+      arguments: { dashboard },
+    });
+    const structured = result.structuredContent as { ok?: boolean; missingPaths?: unknown[] };
+    expect(result.isError).toBeFalsy();
+    expect(structured.ok).toBe(false);
+    expect(structured.missingPaths?.length).toBeGreaterThan(0);
+    await connected.close();
+  });
+
+  it('check_connection reports the connection checks', async () => {
+    const connected = await connectWith({
+      sk: skVersion('2.13.0'),
+      loadSchema: async () => ({ schema: loadBundledSchema(), source: 'remote' as const }),
+    });
+    const result = await connected.callTool({ name: 'check_connection', arguments: {} });
+    const structured = result.structuredContent as { ok?: boolean; checks?: { id: string }[] };
+    expect(structured.checks?.map((c) => c.id)).toEqual(
+      expect.arrayContaining(['signalk_reachable', 'kip_schema_served', 'auth_ok']),
+    );
+    expect(structured.ok).toBe(true);
+    await connected.close();
+  });
+});

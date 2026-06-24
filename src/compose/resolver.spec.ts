@@ -69,6 +69,103 @@ describe('resolveTemplate', () => {
   });
 });
 
+describe('resolveTemplate source overrides', () => {
+  // navigation.speedOverGround in the fixture reports sources gps.0 (default) and gps.1.
+  const sogBinding = (result: ReturnType<typeof resolveTemplate>) =>
+    result.satisfied.flatMap((w) => w.bindings).find((b) => b.path.endsWith('speedOverGround'));
+
+  it('binds the server default source when no override is given', () => {
+    expect(sogBinding(resolveTemplate(mustGet('general'), ctx))?.source).toBe('default');
+  });
+
+  it('binds a chosen source and notes the override', () => {
+    const result = resolveTemplate(mustGet('general'), {
+      ...ctx,
+      sourceOverrides: { 'navigation.speedOverGround': 'gps.1' },
+    });
+    expect(sogBinding(result)?.source).toBe('gps.1');
+    const notes = result.satisfied.flatMap((w) => w.notes).join(' ');
+    expect(notes).toContain('using source "gps.1"');
+    expect(notes).not.toContain('not among the reported sources');
+  });
+
+  it('honours an unknown source but warns it is not among the reported sources', () => {
+    const result = resolveTemplate(mustGet('general'), {
+      ...ctx,
+      sourceOverrides: { 'navigation.speedOverGround': 'made-up.9' },
+    });
+    expect(sogBinding(result)?.source).toBe('made-up.9');
+    expect(result.satisfied.flatMap((w) => w.notes).join(' ')).toContain(
+      'not among the reported sources',
+    );
+  });
+
+  it('leaves paths without an override on the default source', () => {
+    const result = resolveTemplate(mustGet('general'), {
+      ...ctx,
+      sourceOverrides: { 'navigation.speedOverGround': 'gps.1' },
+    });
+    const others = result.satisfied
+      .flatMap((w) => w.bindings)
+      .filter((b) => !b.path.endsWith('speedOverGround'));
+    expect(others.length).toBeGreaterThan(0);
+    expect(others.every((b) => b.source === 'default')).toBe(true);
+  });
+
+  it('notes a source override that no widget bound (typo or unbound path)', () => {
+    const result = resolveTemplate(mustGet('general'), {
+      ...ctx,
+      sourceOverrides: { 'navigation.speedOverGround': 'gps.1', 'made.up.path': 'x.0' },
+    });
+    expect(result.notes).toContain(
+      'source override for "made.up.path" was not applied (path not bound in this dashboard)',
+    );
+    // The override that DID bind is not flagged as unapplied.
+    expect(result.notes.join(' ')).not.toContain('navigation.speedOverGround');
+  });
+});
+
+describe('resolveTemplate datachart source override', () => {
+  const sog = {
+    path: 'navigation.speedOverGround',
+    skUnit: 'm/s',
+    description: null,
+    displayName: null,
+    hasZones: false,
+    pathType: 'number',
+    sampleValue: 5,
+    sourceCount: 2,
+    sources: ['gps.0', 'gps.1'],
+    defaultSource: 'gps.0',
+  };
+  const tmpl: DashboardTemplate = {
+    id: 'x',
+    name: 'X',
+    icon: 'dashboard-dashboard',
+    widgets: [
+      { selector: 'widget-data-chart', dataChart: { candidates: ['navigation.speedOverGround'] } },
+    ],
+  };
+  const base: ResolveContext = {
+    schema,
+    inventory: [sog],
+    plugins: [],
+    capabilities: deriveCapabilities([sog]),
+  };
+
+  it('defaults the chart source when no override is given', () => {
+    expect(resolveTemplate(tmpl, base).satisfied[0]?.dataChart?.source).toBe('default');
+  });
+
+  it('binds the chosen source on the data chart', () => {
+    const result = resolveTemplate(tmpl, {
+      ...base,
+      sourceOverrides: { 'navigation.speedOverGround': 'gps.1' },
+    });
+    expect(result.satisfied[0]?.dataChart?.source).toBe('gps.1');
+  });
+});
+
 describe('resolveTemplate paths-array controls', () => {
   const switchPath = {
     path: 'electrical.switches.nav.state',
@@ -104,6 +201,29 @@ describe('resolveTemplate paths-array controls', () => {
     expect(result.satisfied[0].pathControls).toEqual([
       { ctrlLabel: 'Nav', path: 'self.electrical.switches.nav.state', kind: 'switch' },
     ]);
+  });
+
+  it('applies a source override to a paths-array control', () => {
+    const tmpl: DashboardTemplate = {
+      id: 'x',
+      name: 'X',
+      icon: 'dashboard-dashboard',
+      widgets: [
+        {
+          selector: 'widget-boolean-switch',
+          controls: [{ ctrlLabel: 'Nav', candidates: ['electrical.switches.nav.state'] }],
+        },
+      ],
+    };
+    const localCtx: ResolveContext = {
+      schema,
+      inventory: [switchPath],
+      plugins: [],
+      capabilities: deriveCapabilities([]),
+      sourceOverrides: { 'electrical.switches.nav.state': 'n2k.5' },
+    };
+    const result = resolveTemplate(tmpl, localCtx);
+    expect(result.satisfied[0].pathControls?.[0].source).toBe('n2k.5');
   });
 
   it('drops a paths-array widget when no control candidate has data', () => {

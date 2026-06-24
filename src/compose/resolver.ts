@@ -26,6 +26,8 @@ export interface DroppedWidget {
 export interface ResolveResult {
   satisfied: ResolvedWidget[];
   dropped: DroppedWidget[];
+  /** Dashboard-level notes not tied to one widget (e.g. unapplied source overrides). */
+  notes: string[];
 }
 
 export interface ResolveContext {
@@ -33,10 +35,35 @@ export interface ResolveContext {
   inventory: PathInfo[];
   plugins: PluginInfo[];
   capabilities: Capabilities;
+  /** Per-path Signal K source override (bare path -> source id from get_path_sources). */
+  sourceOverrides?: Record<string, string>;
 }
 
 function stripSelf(path: string): string {
   return path.startsWith('self.') ? path.slice(5) : path;
+}
+
+/**
+ * Resolves the Signal K source for a bound path: the caller's override when one
+ * was chosen (via get_path_sources), else the server default. Records a note
+ * when an override is applied, plus a soft warning if the chosen source is not
+ * among the path's reported sources (the override is still honoured).
+ */
+function pickSource(
+  overrides: Record<string, string> | undefined,
+  bare: string,
+  info: PathInfo | undefined,
+  notes: string[],
+): string {
+  const chosen = overrides?.[bare];
+  if (!chosen) return 'default';
+  notes.push(`"${bare}": using source "${chosen}" instead of the server default`);
+  if (info?.sources && info.sources.length > 0 && !info.sources.includes(chosen)) {
+    notes.push(
+      `"${bare}": source "${chosen}" is not among the reported sources (${info.sources.join(', ')})`,
+    );
+  }
+  return chosen;
 }
 
 export function capabilityMet(gate: CapabilityGate, c: Capabilities): boolean {
@@ -102,13 +129,14 @@ export function resolveTemplate(template: DashboardTemplate, ctx: ResolveContext
       }
       const info = byPath.get(bare);
       if (!info) continue;
-      if (info.sourceCount > 1) {
+      const source = pickSource(ctx.sourceOverrides, bare, info, notes);
+      if (source === 'default' && info.sourceCount > 1) {
         notes.push(`"${bare}" has ${info.sourceCount} sources; using the server default`);
       }
       bindings.push({
         slot: slot.slot,
         path: `self.${bare}`,
-        source: 'default',
+        source,
         convertUnitTo: chooseConvertUnit(design, info.skUnit ?? '', {
           preferred: slot.preferredUnit,
           slotDefault: widgetSlot.defaultConvertUnitTo,
@@ -138,7 +166,7 @@ export function resolveTemplate(template: DashboardTemplate, ctx: ResolveContext
         const info = byPath.get(bare);
         dataChart = {
           path: `self.${bare}`,
-          source: 'default',
+          source: pickSource(ctx.sourceOverrides, bare, info, notes),
           convertUnitTo: chooseConvertUnit(design, info?.skUnit ?? '', {
             preferred: dw.dataChart.preferredUnit,
           }),
@@ -153,10 +181,12 @@ export function resolveTemplate(template: DashboardTemplate, ctx: ResolveContext
       for (const control of dw.controls ?? []) {
         const bare = control.candidates.find((c) => byPath.has(c));
         if (!bare) continue; // a control with no data is simply left out of the panel
+        const source = pickSource(ctx.sourceOverrides, bare, byPath.get(bare), notes);
         resolved.push({
           ctrlLabel: control.ctrlLabel,
           path: `self.${bare}`,
           kind: control.kind ?? defaultKind,
+          ...(source !== 'default' ? { source } : {}),
           ...(control.type ? { type: control.type } : {}),
         });
       }
@@ -189,7 +219,21 @@ export function resolveTemplate(template: DashboardTemplate, ctx: ResolveContext
     });
   }
 
-  return { satisfied, dropped };
+  // Flag any source override that never landed (a typo, or a path no satisfied
+  // widget bound), so a caller isn't left thinking a silent no-op took effect.
+  const boundPaths = new Set<string>();
+  for (const w of satisfied) {
+    for (const b of w.bindings) boundPaths.add(stripSelf(b.path));
+    if (w.dataChart) boundPaths.add(stripSelf(w.dataChart.path));
+    for (const c of w.pathControls ?? []) boundPaths.add(stripSelf(c.path));
+  }
+  const notes = Object.keys(ctx.sourceOverrides ?? {})
+    .filter((path) => !boundPaths.has(path))
+    .map(
+      (path) => `source override for "${path}" was not applied (path not bound in this dashboard)`,
+    );
+
+  return { satisfied, dropped, notes };
 }
 
 function gate(dw: DesiredWidget, enabled: Set<string>, capabilities: Capabilities): string | null {

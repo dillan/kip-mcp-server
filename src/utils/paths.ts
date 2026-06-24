@@ -2,11 +2,14 @@ import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+let cachedRoot: string | undefined;
+
 /** Walks up from this module to find the package root (the dir with package.json). */
 export function packageRoot(): string {
+  if (cachedRoot !== undefined) return cachedRoot;
   let dir = dirname(fileURLToPath(import.meta.url));
   for (let i = 0; i < 12; i++) {
-    if (existsSync(join(dir, 'package.json'))) return dir;
+    if (existsSync(join(dir, 'package.json'))) return (cachedRoot = dir);
     const parent = dirname(dir);
     if (parent === dir) break;
     dir = parent;

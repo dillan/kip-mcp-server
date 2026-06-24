@@ -10,6 +10,7 @@
 import {
   RESOURCE_METADATA_PATH,
   buildProtectedResourceMetadata,
+  resourceMetadataPathFor,
   resourceMetadataUrlFor,
 } from './resource-metadata.js';
 
@@ -54,5 +55,21 @@ describe('resource metadata', () => {
     expect(resourceMetadataUrlFor(publicUrl)).toBe(
       'https://boat.example.com/.well-known/oauth-protected-resource/mcp',
     );
+  });
+
+  it('derives the local serve path so it matches the advertised URL for a custom endpoint path', () => {
+    // The served path must equal the path component of the advertised URL, even
+    // when the MCP endpoint is not the default /mcp.
+    expect(resourceMetadataPathFor('https://boat.example.com/mcp')).toBe(RESOURCE_METADATA_PATH);
+    expect(resourceMetadataPathFor('https://boat.example.com/kip-mcp')).toBe(
+      '/.well-known/oauth-protected-resource/kip-mcp',
+    );
+    expect(new URL(resourceMetadataUrlFor('https://boat.example.com/kip-mcp')).pathname).toBe(
+      resourceMetadataPathFor('https://boat.example.com/kip-mcp'),
+    );
+  });
+
+  it('falls back to the default path when the public URL is unparseable', () => {
+    expect(resourceMetadataPathFor('not a url')).toBe(RESOURCE_METADATA_PATH);
   });
 });

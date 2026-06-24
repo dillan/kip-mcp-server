@@ -60,6 +60,37 @@ Reading your data needs no login. Writing dashboards to the server needs either 
 a username and password; you can always use the file-export option instead, which needs
 nothing extra.
 
+## Remote access over HTTP (optional, advanced)
+
+By default the server talks over **stdio** — the assistant runs it as a local subprocess.
+There is also an optional **HTTP** mode (`kip-mcp-http`) for hosting the server so a remote
+assistant (such as Claude.ai) can reach it over the network. It is opt-in and meant for a
+single operator behind a reverse proxy that adds TLS.
+
+```bash
+# Behind a TLS-terminating reverse proxy that forwards to 127.0.0.1:3017
+MCP_BEARER_TOKEN=a-long-random-secret \
+MCP_PUBLIC_URL=https://boat.example.com/mcp \
+  npx kip-mcp-http
+```
+
+| Setting | What it is | Default |
+| --- | --- | --- |
+| `HTTP_HOST` | Address to bind | `127.0.0.1` (loopback) |
+| `HTTP_PORT` | Port to listen on | `3017` |
+| `HTTP_PATH` | URL path for the MCP endpoint | `/mcp` |
+| `MCP_BEARER_TOKEN` | One or more (comma-separated) bearer tokens that callers must present | (none) |
+| `MCP_PUBLIC_URL` | The public URL clients reach, used for the Host allowlist and metadata | (derived) |
+| `MCP_ALLOWED_ORIGINS` | Comma-separated browser origins to accept (off by default) | (none) |
+| `MCP_ALLOWED_HOSTS` | Override the Host allowlist | (derived) |
+| `MCP_ALLOW_INSECURE` | Set to `true` to start anyway in an unsafe setup | (unset) |
+
+Every request must present a valid `Authorization: Bearer <token>` and pass a Host/Origin
+allowlist before it reaches the MCP layer. **The server refuses to start** if it would bind
+to a non-loopback address or run without a bearer token, unless you set
+`MCP_ALLOW_INSECURE=true`. It uses one Signal K login for all sessions, so treat it as a
+single-tenant deployment; the same `SIGNALK_*` settings above apply.
+
 ## What the assistant can do
 
 The server gives the assistant a set of tools, grouped by job:

@@ -33,6 +33,8 @@ const makeFakeTransportFactory = () => {
       initialized: false,
       handleCount: 0,
       closeCount: 0,
+      async start() {},
+      async send() {},
       async handleRequest() {
         transport.handleCount += 1;
         if (!transport.initialized) {
@@ -75,7 +77,18 @@ const fakeRes = () =>
 const req = (method: string, headers: Record<string, string> = {}): IncomingMessage =>
   ({ method, headers }) as unknown as IncomingMessage;
 
-const initBody = { jsonrpc: '2.0', method: 'initialize', id: 1 };
+// A real initialize request — checked against the SDK's isInitializeRequest, so
+// it must carry params with protocolVersion, capabilities, and clientInfo.
+const initBody = {
+  jsonrpc: '2.0',
+  id: 1,
+  method: 'initialize',
+  params: {
+    protocolVersion: '2025-06-18',
+    capabilities: {},
+    clientInfo: { name: 'test-client', version: '0.0.0' },
+  },
+};
 
 describe('HttpSessionManager', () => {
   it('creates a transport and connects a fresh server on initialize', async () => {

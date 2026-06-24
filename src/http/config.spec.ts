@@ -120,4 +120,31 @@ describe('loadHttpConfig', () => {
       'https://boat.example.com/.well-known/oauth-protected-resource/mcp',
     );
   });
+
+  it('serves the metadata at the path component of the advertised URL', () => {
+    expect(loadHttpConfig(safeEnv()).metadataPath).toBe(
+      '/.well-known/oauth-protected-resource/mcp',
+    );
+    // A custom endpoint path must still be reachable at the advertised path.
+    const custom = loadHttpConfig(safeEnv({ MCP_PUBLIC_URL: 'https://boat.example.com/kip-mcp' }));
+    expect(custom.metadataPath).toBe('/.well-known/oauth-protected-resource/kip-mcp');
+    expect(new URL(custom.security.resourceMetadataUrl).pathname).toBe(custom.metadataPath);
+  });
+
+  it('treats LOCALHOST (any case) as loopback and starts without an override', () => {
+    const cfg = loadHttpConfig(safeEnv({ HTTP_HOST: 'LOCALHOST' }));
+    expect(cfg.listenHost).toBe('LOCALHOST');
+    expect(exitSpy).not.toHaveBeenCalled();
+  });
+
+  it('treats the IPv6 loopback ::1 as loopback and allows its bracketed Host forms', () => {
+    const env = safeEnv({ HTTP_HOST: '::1' });
+    // Use the derived public URL so the bracketed forms are exercised.
+    delete (env as Record<string, unknown>).MCP_PUBLIC_URL;
+    const cfg = loadHttpConfig(env);
+    expect(exitSpy).not.toHaveBeenCalled();
+    expect(cfg.publicUrl).toBe('http://[::1]:3017/mcp');
+    expect(cfg.security.allowedHosts).toContain('[::1]');
+    expect(cfg.security.allowedHosts).toContain('[::1]:3017');
+  });
 });

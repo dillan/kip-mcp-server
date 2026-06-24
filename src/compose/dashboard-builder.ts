@@ -102,3 +102,52 @@ export function previewAscii(dashboard: Dashboard, columns = 24): string {
   const border = `+${'-'.repeat(columns)}+`;
   return [border, ...canvas.map((r) => `|${r.join('')}|`), border].join('\n');
 }
+
+const SVG_CELL = 16;
+const SVG_DEFAULT_FILL = '#888888';
+
+function escapeXml(value: string): string {
+  return value.replace(/[<>&]/g, (c) => (c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&amp;'));
+}
+
+function num(value: unknown, fallback = 0): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+/**
+ * Renders a dashboard's grid as an SVG: one coloured rectangle per widget, on the
+ * 24-column grid. Widget colours come from the token->hex map (built from the
+ * schema's design system); widgets with no colour, or when the map has no hex for
+ * the token, fall back to a neutral grey. Tolerant of malformed nodes.
+ */
+export function previewSvg(
+  dashboard: Dashboard,
+  colorHex: Map<string, string>,
+  columns = 24,
+): string {
+  const nodes = (Array.isArray(dashboard.configuration) ? dashboard.configuration : []).filter(
+    (n): n is GridNode => Boolean(n) && typeof n === 'object',
+  );
+  const rows = Math.max(1, ...nodes.map((n) => num(n.y) + num(n.h, 1)));
+  const width = columns * SVG_CELL;
+  const height = rows * SVG_CELL;
+  const rects = nodes
+    .map((node) => {
+      const x = num(node.x) * SVG_CELL;
+      const y = num(node.y) * SVG_CELL;
+      const w = num(node.w, 1) * SVG_CELL;
+      const h = num(node.h, 1) * SVG_CELL;
+      const token = (node.input?.widgetProperties?.config as { color?: string } | undefined)?.color;
+      const fill = (token && colorHex.get(token)) || SVG_DEFAULT_FILL;
+      const label = escapeXml(abbreviate(node.input?.widgetProperties?.type ?? ''));
+      return (
+        `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}" stroke="#222" stroke-width="1"/>` +
+        `<text x="${x + 3}" y="${y + 12}" font-size="9" fill="#000">${label}</text>`
+      );
+    })
+    .join('');
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">` +
+    `<rect width="${width}" height="${height}" fill="#0b0f14"/>${rects}</svg>`
+  );
+}

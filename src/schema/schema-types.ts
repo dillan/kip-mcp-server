@@ -44,6 +44,8 @@ export interface WidgetSchemaEntry {
 export interface ColorToken {
   value: string;
   label: string;
+  /** Base (dark-theme) hex for the token, used by the SVG preview. Absent on older schema artifacts. */
+  hex?: string;
 }
 
 export interface UnitMeasure {

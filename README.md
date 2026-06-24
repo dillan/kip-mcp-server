@@ -1,5 +1,11 @@
 # kip-mcp-server
 
+[![CI](https://img.shields.io/github/actions/workflow/status/dillan/kip-mcp-server/ci.yml?branch=main&label=CI)](https://github.com/dillan/kip-mcp-server/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/kip-mcp-server)](https://www.npmjs.com/package/kip-mcp-server)
+[![npm downloads](https://img.shields.io/npm/dm/kip-mcp-server)](https://www.npmjs.com/package/kip-mcp-server)
+[![license](https://img.shields.io/npm/l/kip-mcp-server)](./LICENSE)
+[![node](https://img.shields.io/node/v/kip-mcp-server)](https://www.npmjs.com/package/kip-mcp-server)
+
 An [MCP](https://modelcontextprotocol.io) server that lets an AI assistant (such as
 Claude, Codex, or Gemini) look at your boat's [Signal K](https://signalk.org) data and
 help you design and install [KIP](https://github.com/mxtommy/Kip) dashboards — the
@@ -18,6 +24,35 @@ only saves anything to your boat after you say yes.
   saved.
 - **Installs them — with your OK.** It writes the dashboards to your KIP setup, or hands
   you a file you can import yourself.
+
+## What it looks like
+
+A short session with an AI assistant, after pointing it at your boat:
+
+```text
+You:  Look at my boat's data and suggest some KIP dashboards.
+
+  → analyze_signalk_data            142 paths · speed, wind, depth, battery, engine
+  → recommend_dashboard_set         6 dashboards the data supports
+
+Assistant: Your boat reports navigation, wind, depth, electrical and engine data,
+so I can build these. Here's the "Sailing" one — a preview, nothing saved yet:
+
+  ┌─────────────┬─────────────┬───────────────────────────┐
+  │ SOG  6.2 kn │ AWS 14 kn   │                           │
+  ├─────────────┼─────────────┤        wind steering       │
+  │ DPT  8.4 m  │ AWA  42°    │                           │
+  └─────────────┴─────────────┴───────────────────────────┘
+
+You:  Looks good — install the sailing and anchor ones.
+
+  → apply_kip_config (dry run)      2 dashboards → KipConfig (global)
+Assistant: This will add "Sailing" and "Anchor" to KIP. Go ahead?
+You:  Yes.
+  → apply_kip_config                written ✓  — open KIP to see them.
+```
+
+The assistant always shows a preview first and asks before writing anything to your boat.
 
 ## Quick start (for boat owners)
 

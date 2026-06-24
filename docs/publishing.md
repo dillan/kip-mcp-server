@@ -56,3 +56,47 @@ trusted publisher configured.
 - No `NPM_TOKEN` / `NODE_AUTH_TOKEN` is set — the OIDC exchange replaces it.
 
 Reference: <https://docs.npmjs.com/trusted-publishers>.
+
+## MCP Registry
+
+The package is described for the official [MCP Registry](https://registry.modelcontextprotocol.io)
+by [`server.json`](../server.json) (validated against the
+`2025-12-11` schema). The registry stores **metadata only** — the package itself lives on
+npm — and proves you own the npm artifact through the **`mcpName`** field in `package.json`
+(`io.github.dillan/kip-mcp-server`), which must exactly equal the `name` in `server.json`.
+
+Publishing to the registry is a manual step (it needs a GitHub login for the `io.github.dillan`
+namespace, which CI can't do interactively):
+
+1. Make sure the npm package is published **with** the `mcpName` field (any release after this
+   change has it), then sync the manifest version to the latest published one:
+   ```bash
+   npm run registry:sync   # writes the latest published npm version into server.json
+   ```
+   The registry requires `server.json`'s version to match a published npm version that carries
+   `mcpName`, so always run this before publishing (package.json keeps its `0.0.0-development`
+   placeholder, so the version of record is on npm).
+2. Install the CLI: `brew install mcp-publisher`, or download `mcp-publisher` from the
+   [registry releases](https://github.com/modelcontextprotocol/registry/releases/latest).
+3. Authenticate as the `dillan` GitHub account: `mcp-publisher login github` (device flow).
+4. `mcp-publisher publish` — it validates `server.json` against the live schema and submits it.
+5. Confirm: `curl "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dillan/kip-mcp-server"`.
+
+In CI this can be automated with `mcp-publisher login github-oidc` (the repo lives under the
+`dillan` namespace, so its OIDC token authorizes `io.github.dillan/*` with no stored secret).
+The registry is still in **preview**, so the schema date and API path may change — re-check
+the `$schema` value and `/v0.x/` path before publishing.
+
+## awesome-mcp-servers
+
+To list the server on [`awesome-mcp-servers`](https://github.com/punkpeye/awesome-mcp-servers),
+fork it, add this line to the closest category (no marine section exists; **Location Services**
+fits navigation/GPS), keeping the list alphabetical, then open a PR per its `CONTRIBUTING`:
+
+```markdown
+- [dillan/kip-mcp-server](https://github.com/dillan/kip-mcp-server) 📇 🏠 - Design and install
+  KIP marine dashboards from a boat's Signal K data (speed, wind, depth, AIS, battery, engine).
+```
+
+The legend on that list: 📇 TypeScript/JavaScript codebase, 🏠 Local Service. Check the live
+README at submission time — its categories and legend change.

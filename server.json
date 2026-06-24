@@ -1,0 +1,73 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.dillan/kip-mcp-server",
+  "title": "KIP MCP Server",
+  "description": "Reads a boat's Signal K data and helps an AI assistant design and install KIP dashboards.",
+  "version": "1.11.0",
+  "websiteUrl": "https://github.com/dillan/kip-mcp-server#readme",
+  "repository": {
+    "url": "https://github.com/dillan/kip-mcp-server",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "kip-mcp-server",
+      "version": "1.11.0",
+      "runtimeHint": "npx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "SIGNALK_HOST",
+          "description": "Signal K server host name or IP.",
+          "isRequired": false,
+          "format": "string",
+          "default": "localhost"
+        },
+        {
+          "name": "SIGNALK_PORT",
+          "description": "Signal K server port.",
+          "isRequired": false,
+          "format": "number",
+          "default": "3000"
+        },
+        {
+          "name": "SIGNALK_TLS",
+          "description": "Set true if Signal K uses https/wss.",
+          "isRequired": false,
+          "format": "boolean",
+          "default": "false"
+        },
+        {
+          "name": "SIGNALK_TOKEN",
+          "description": "Signal K token, needed to write dashboards (or use SIGNALK_USER/PASSWORD).",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "SIGNALK_USER",
+          "description": "Signal K username, used with SIGNALK_PASSWORD instead of a token.",
+          "isRequired": false,
+          "format": "string"
+        },
+        {
+          "name": "SIGNALK_PASSWORD",
+          "description": "Signal K password, used with SIGNALK_USER.",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "KIP_URL",
+          "description": "Override where KIP is served, if it is not the default.",
+          "isRequired": false,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}

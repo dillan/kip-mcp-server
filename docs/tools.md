@@ -82,7 +82,10 @@ Build a complete KipConfig.json from dashboards that a user can import via KIP S
 
 Analyse the boat's Signal K data: the available paths with units, the vessel capabilities, and installed plugins. Use this before recommending dashboards.
 
-Takes no inputs.
+| Input | Type | Required | Description |
+| --- | --- | --- | --- |
+| `limit` | integer | no | Maximum paths to return. Omit to return all; with it, page using nextCursor. |
+| `cursor` | string | no | Opaque token from a previous response, to fetch the next page. |
 
 ### `list_available_paths`
 
@@ -93,6 +96,8 @@ List the Signal K data paths available on the boat, optionally filtered by prefi
 | Input | Type | Required | Description |
 | --- | --- | --- | --- |
 | `prefix` | string | no | Only list paths starting with this prefix. |
+| `limit` | integer | no | Maximum paths to return. Omit to return all; with it, page using nextCursor. |
+| `cursor` | string | no | Opaque token from a previous response, to fetch the next page. |
 
 ### `get_path_meta`
 

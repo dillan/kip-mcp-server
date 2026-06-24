@@ -4,6 +4,19 @@
  * returns a single user message that tells the assistant how to proceed.
  */
 import { z } from 'zod';
+import { optionalCompletable, prefixComplete } from './completion.js';
+
+/** Common areas a user might want a dashboard set to emphasise. */
+const FOCUS_AREAS = [
+  'sailing',
+  'navigation',
+  'power',
+  'environment',
+  'anchoring',
+  'engine',
+  'racing',
+  'weather',
+];
 
 interface PromptMessage {
   role: 'user';
@@ -37,10 +50,10 @@ export const PROMPT_SPECS: PromptSpec[] = [
     description:
       "Guided workflow: look at the boat's data, recommend dashboards, preview them, and install them with your OK.",
     argsSchema: {
-      focus: z
-        .string()
-        .optional()
-        .describe('Optional area to emphasise, e.g. "sailing", "engine" or "anchoring".'),
+      focus: optionalCompletable(
+        'Optional area to emphasise, e.g. "sailing", "engine" or "anchoring".',
+        prefixComplete(FOCUS_AREAS),
+      ),
     },
     build: ({ focus }) =>
       userMessage([

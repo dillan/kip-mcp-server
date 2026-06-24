@@ -86,6 +86,81 @@ describe('KipMCPServer over MCP (in-memory)', () => {
   });
 });
 
+describe('resource templates and completion', () => {
+  it('exposes the widget and template resource templates', async () => {
+    const client = await connectClient();
+    const { resourceTemplates } = await client.listResourceTemplates();
+    expect(resourceTemplates.map((t) => t.uriTemplate)).toEqual(
+      expect.arrayContaining(['kip://widget/{selector}', 'kip://template/{id}']),
+    );
+    await client.close();
+  });
+
+  it('reads an individual widget via its template URI', async () => {
+    const client = await connectClient();
+    const read = await client.readResource({ uri: 'kip://widget/widget-numeric' });
+    const contents = read.contents as Array<{ uri: string; text: string }>;
+    expect(contents[0].uri).toBe('kip://widget/widget-numeric');
+    expect(JSON.parse(contents[0].text).selector).toBe('widget-numeric');
+    await client.close();
+  });
+
+  it('reads an individual dashboard template via its template URI', async () => {
+    const client = await connectClient();
+    const read = await client.readResource({ uri: 'kip://template/sailing' });
+    const contents = read.contents as Array<{ text: string }>;
+    expect(JSON.parse(contents[0].text).id).toBe('sailing');
+    await client.close();
+  });
+
+  it('completes a widget selector template variable', async () => {
+    const client = await connectClient();
+    const res = await client.complete({
+      ref: { type: 'ref/resource', uri: 'kip://widget/{selector}' },
+      argument: { name: 'selector', value: 'widget-g' },
+    });
+    expect(res.completion.values.length).toBeGreaterThan(0);
+    expect(res.completion.values.every((v) => v.startsWith('widget-g'))).toBe(true);
+    await client.close();
+  });
+
+  it('completes the optional design_dashboards focus argument', async () => {
+    const client = await connectClient();
+    const res = await client.complete({
+      ref: { type: 'ref/prompt', name: 'design_dashboards' },
+      argument: { name: 'focus', value: 'sa' },
+    });
+    expect(res.completion.values).toContain('sailing');
+    await client.close();
+  });
+
+  it('surfaces an error when reading an unknown widget or template URI', async () => {
+    const client = await connectClient();
+    await expect(client.readResource({ uri: 'kip://widget/widget-nope' })).rejects.toThrow(
+      /Unknown widget/,
+    );
+    await expect(client.readResource({ uri: 'kip://template/nope' })).rejects.toThrow(
+      /Unknown template/,
+    );
+    await client.close();
+  });
+
+  it('still lists the static resources when the schema cannot be loaded', async () => {
+    const server = new KipMCPServer({
+      loadSchema: () => Promise.reject(new Error('KIP rejected auth')),
+    });
+    const client = new Client({ name: 'test-client', version: '0.0.0' });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+    // The widget list callback can't load the schema, but listing must not fail.
+    const { resources } = await client.listResources();
+    expect(resources.map((r) => r.uri)).toEqual(
+      expect.arrayContaining(['kip://widget_catalog', 'kip://initial_context']),
+    );
+    await client.close();
+  });
+});
+
 describe('world-class MCP surface (structured output + annotations)', () => {
   it('exposes output schemas and read-only annotations on tools', async () => {
     const client = await connectClient();
@@ -170,7 +245,16 @@ describe('guided prompts', () => {
     });
     const text = (result.messages[0].content as { text: string }).text;
     expect(text).toContain('analyze_signalk_data');
-    expect(text).toContain('sailing');
+    expect(text).toContain('Focus especially on: sailing');
+    await client.close();
+  });
+
+  it('keeps focus optional: builds with no focus and omits the focus line', async () => {
+    const client = await connectClient();
+    const result = await client.getPrompt({ name: 'design_dashboards', arguments: {} });
+    const text = (result.messages[0].content as { text: string }).text;
+    expect(text).toContain('analyze_signalk_data');
+    expect(text).not.toContain('Focus especially on');
     await client.close();
   });
 });

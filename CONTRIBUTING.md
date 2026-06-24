@@ -20,14 +20,19 @@ Common commands:
 npm run typecheck   # check types (tsc --noEmit)
 npm run lint        # check code style (eslint)
 npm run lint:fix    # fix what can be fixed automatically
+npm run format      # format with prettier
 npm test            # run the tests
 npm run test:coverage  # run the tests with coverage
 npm run build       # compile to dist/
 npm run dev         # compile and watch for changes
 npm run smoke       # start the built server and check it answers over MCP
 npm run inspect     # build, then open the MCP Inspector against the server
-npm run ci          # run the whole set: typecheck, lint, build, coverage, smoke
+npm run docs:tools  # regenerate docs/tools.md from the tools (after build)
+npm run ci          # run the whole set, exactly as CI does
 ```
+
+If you add or change a tool or prompt, run `npm run docs:tools` and commit the updated
+`docs/tools.md` — CI checks it is in sync.
 
 Run `npm run ci` before you open a pull request — it's the same set CI runs.
 

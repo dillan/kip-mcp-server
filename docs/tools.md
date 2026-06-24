@@ -156,11 +156,12 @@ Recommend a set of KIP dashboards for this boat: the use-case dashboards its dat
 
 **Preview a dashboard** — Read-only.
 
-Render an ASCII preview of a dashboard object (as returned by compose_dashboard).
+Render a preview of a dashboard object (as returned by compose_dashboard): a text grid (ascii, the default) or an SVG picture (svg).
 
 | Input | Type | Required | Description |
 | --- | --- | --- | --- |
 | `dashboard` | object | yes | A KIP dashboard object. |
+| `format` | `ascii` / `svg` | no | Preview format: "ascii" (default) or "svg". |
 
 ### `validate_against_signalk`
 

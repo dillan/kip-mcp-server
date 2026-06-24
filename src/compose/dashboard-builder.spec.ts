@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { deriveCapabilities, flattenVesselData } from '../discovery/inventory.js';
 import { loadBundledSchema } from '../schema/kip-schema.js';
-import { composeDashboard, previewAscii } from './dashboard-builder.js';
+import { composeDashboard, previewAscii, previewSvg } from './dashboard-builder.js';
 import type { ResolveContext } from './resolver.js';
 import { getTemplate, type DashboardTemplate } from './templates.js';
 
@@ -67,5 +67,30 @@ describe('previewAscii', () => {
     const ascii = previewAscii(dashboard);
     expect(ascii.split('\n')[0]).toMatch(/^\+-+\+$/);
     expect(ascii).toContain('|');
+  });
+});
+
+describe('previewSvg', () => {
+  it('renders an svg with a rectangle per widget, using the colour map with a grey fallback', () => {
+    counter = 0;
+    const { dashboard } = composeDashboard(template('general'), ctx, uuid);
+    const svg = previewSvg(dashboard, new Map([['blue', '#3298ff']]));
+    expect(svg.startsWith('<svg')).toBe(true);
+    expect(svg).toContain('</svg>');
+    // one background rect plus one per widget
+    expect((svg.match(/<rect/g) ?? []).length).toBeGreaterThanOrEqual(
+      dashboard.configuration.length + 1,
+    );
+    expect(svg).toContain('#888888');
+  });
+
+  it('does not throw on a malformed dashboard', () => {
+    const svg = previewSvg(
+      { configuration: [null, { x: 0, y: 0, w: 2, h: 2 }] } as unknown as Parameters<
+        typeof previewSvg
+      >[0],
+      new Map(),
+    );
+    expect(svg.startsWith('<svg')).toBe(true);
   });
 });

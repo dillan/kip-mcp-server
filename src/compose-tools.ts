@@ -4,7 +4,12 @@
  */
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
-import { composeDashboard, previewAscii, type Dashboard } from './compose/dashboard-builder.js';
+import {
+  composeDashboard,
+  previewAscii,
+  previewSvg,
+  type Dashboard,
+} from './compose/dashboard-builder.js';
 import type { ResolveContext } from './compose/resolver.js';
 import { getTemplate, TEMPLATES } from './compose/templates.js';
 import { discoverInventory } from './discovery/discover.js';
@@ -23,6 +28,13 @@ import { validateAgainstSignalk } from './validate-signalk.js';
 
 const INTENT_IDS = TEMPLATES.map((t) => t.id);
 const droppedSchema = z.array(z.object({ selector: z.string(), reason: z.string() }));
+
+/** Token -> hex map for the SVG preview, from the schema's design system (empty on old artifacts). */
+function colorHexMap(schema: KipDashboardSchema): Map<string, string> {
+  return new Map(
+    schema.designSystem.colors.flatMap((c) => (c.hex ? [[c.value, c.hex] as const] : [])),
+  );
+}
 
 export const COMPOSE_TOOL_SPECS: ToolSpec[] = [
   {
@@ -64,9 +76,15 @@ export const COMPOSE_TOOL_SPECS: ToolSpec[] = [
     name: 'preview_dashboard',
     title: 'Preview a dashboard',
     description:
-      'Render an ASCII preview of a dashboard object (as returned by compose_dashboard).',
-    inputSchema: { dashboard: kipObject.describe('A KIP dashboard object.') },
-    outputSchema: { ascii: z.string() },
+      'Render a preview of a dashboard object (as returned by compose_dashboard): a text grid (ascii, the default) or an SVG picture (svg).',
+    inputSchema: {
+      dashboard: kipObject.describe('A KIP dashboard object.'),
+      format: z
+        .enum(['ascii', 'svg'])
+        .optional()
+        .describe('Preview format: "ascii" (default) or "svg".'),
+    },
+    outputSchema: { ascii: z.string().optional(), svg: z.string().optional() },
     annotations: READ_ONLY_LOCAL,
   },
   {
@@ -149,7 +167,9 @@ export async function callComposeTool(
     }
 
     case 'preview_dashboard':
-      return { ascii: previewAscii(args.dashboard as Dashboard) };
+      return args.format === 'svg'
+        ? { svg: previewSvg(args.dashboard as Dashboard, colorHexMap(schema)) }
+        : { ascii: previewAscii(args.dashboard as Dashboard) };
 
     case 'validate_against_signalk': {
       const discovery = await discoverInventory(sk);

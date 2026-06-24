@@ -1,4 +1,5 @@
 import type { KipDashboardSchema } from '../schema/schema-types.js';
+import { deriveDataSets } from './datasets.js';
 import { makeDefaultApp } from './defaults.js';
 
 export interface KipConfig {
@@ -32,6 +33,8 @@ export function buildKipConfig(
 
   // Always stamp the version KIP expects, even when starting from a base config.
   app.configVersion = schema.meta.configVersion;
+  // Seed app.dataSets so any data-chart widgets have their data series ready.
+  app.dataSets = deriveDataSets(dashboards);
   if (options.units) {
     const current = (app.unitDefaults as Record<string, string> | undefined) ?? {};
     app.unitDefaults = { ...current, ...options.units };

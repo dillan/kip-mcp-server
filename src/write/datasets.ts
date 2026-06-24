@@ -19,6 +19,38 @@ export interface DataSetEntry {
   editable: boolean;
 }
 
-export function deriveDataSets(_dashboards: unknown[]): DataSetEntry[] {
-  throw new Error('deriveDataSets not implemented');
+export function deriveDataSets(dashboards: unknown[]): DataSetEntry[] {
+  const out: DataSetEntry[] = [];
+  for (const dashboard of dashboards) {
+    const config = (dashboard ?? {}) as { configuration?: unknown };
+    const nodes = Array.isArray(config.configuration) ? config.configuration : [];
+    for (const raw of nodes) {
+      if (!raw || typeof raw !== 'object') continue;
+      const node = raw as {
+        id?: unknown;
+        input?: { widgetProperties?: { type?: unknown; config?: unknown } };
+      };
+      const wp = node.input?.widgetProperties;
+      if (wp?.type !== 'widget-data-chart') continue;
+      const cfg = (wp.config ?? {}) as Record<string, unknown>;
+      const path = typeof cfg.datachartPath === 'string' ? cfg.datachartPath : '';
+      if (!path) continue;
+      const rawSource = typeof cfg.datachartSource === 'string' ? cfg.datachartSource : '';
+      const convertUnitTo = typeof cfg.convertUnitTo === 'string' ? cfg.convertUnitTo : '';
+      const timeScale = typeof cfg.timeScale === 'string' ? cfg.timeScale : 'minute';
+      const period = typeof cfg.period === 'number' ? cfg.period : 10;
+      out.push({
+        uuid: typeof node.id === 'string' ? node.id : '',
+        path,
+        pathSource: rawSource || 'default',
+        baseUnit: '',
+        timeScaleFormat: timeScale,
+        period,
+        // The label KIP matches on: path | convertUnitTo | source | timeScale | period.
+        label: [path, convertUnitTo, rawSource, timeScale, String(period)].join('|'),
+        editable: false,
+      });
+    }
+  }
+  return out;
 }

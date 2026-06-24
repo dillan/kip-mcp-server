@@ -19,6 +19,7 @@ import {
   type ToolSpec,
 } from './tool-spec.js';
 import { ToolError } from './tools.js';
+import { validateAgainstSignalk } from './validate-signalk.js';
 
 const INTENT_IDS = TEMPLATES.map((t) => t.id);
 const droppedSchema = z.array(z.object({ selector: z.string(), reason: z.string() }));
@@ -66,6 +67,22 @@ export const COMPOSE_TOOL_SPECS: ToolSpec[] = [
     inputSchema: { dashboard: kipObject.describe('A KIP dashboard object.') },
     outputSchema: { ascii: z.string() },
     annotations: READ_ONLY_LOCAL,
+  },
+  {
+    name: 'validate_against_signalk',
+    title: 'Validate against Signal K',
+    description:
+      "Check a KIP dashboard against the live boat: that every bound data path exists, the widgets' required plugins are installed and enabled, and the units match. The live counterpart of validate_kip_config (which only checks structure).",
+    inputSchema: { dashboard: kipObject.describe('A KIP dashboard object.') },
+    outputSchema: {
+      ok: z.boolean(),
+      checkedPaths: z.number(),
+      missingPaths: z.array(kipObject),
+      pluginIssues: z.array(kipObject),
+      unitMismatches: z.array(kipObject),
+      warnings: z.array(z.string()),
+    },
+    annotations: READ_ONLY_REMOTE,
   },
 ];
 
@@ -132,6 +149,11 @@ export async function callComposeTool(
 
     case 'preview_dashboard':
       return { ascii: previewAscii(args.dashboard as Dashboard) };
+
+    case 'validate_against_signalk': {
+      const discovery = await discoverInventory(sk);
+      return validateAgainstSignalk(schema, args.dashboard, discovery);
+    }
 
     default:
       throw new ToolError(`Unknown compose tool "${name}".`);

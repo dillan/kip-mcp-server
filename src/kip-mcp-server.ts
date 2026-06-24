@@ -1,4 +1,4 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { callComposeTool, COMPOSE_TOOL_SPECS } from './compose-tools.js';
 import { loadConfig, type ServerConfig } from './config.js';
@@ -6,6 +6,14 @@ import { callDiscoveryTool, DISCOVERY_TOOL_SPECS } from './discovery-tools.js';
 import { SkClient } from './discovery/sk-client.js';
 import { callDoctorTool, DOCTOR_TOOL_SPECS } from './doctor-tools.js';
 import { PROMPT_SPECS } from './prompts.js';
+import {
+  completeTemplateId,
+  completeWidgetSelector,
+  listTemplateResources,
+  listWidgetResources,
+  readTemplateResource,
+  readWidgetResource,
+} from './resource-templates.js';
 import { readResourceText } from './resources.js';
 import { loadKipSchema } from './schema/kip-schema.js';
 import type { KipDashboardSchema } from './schema/schema-types.js';
@@ -197,6 +205,42 @@ export class KipMCPServer {
         },
       );
     }
+
+    // Each widget addressable on its own, with selector completion.
+    this.server.registerResource(
+      'KIP widget',
+      new ResourceTemplate('kip://widget/{selector}', {
+        list: async () => ({ resources: listWidgetResources(await this.getSchema()) }),
+        complete: {
+          selector: async (value) => completeWidgetSelector(await this.getSchema(), value),
+        },
+      }),
+      {
+        description: 'One KIP widget by selector, with its default config, binding kind and slots.',
+        mimeType: 'application/json',
+      },
+      async (uri, variables) => {
+        const text = readWidgetResource(await this.getSchema(), String(variables.selector));
+        return { contents: [{ uri: uri.href, mimeType: 'application/json', text }] };
+      },
+    );
+
+    // Each dashboard template addressable on its own, with id completion.
+    this.server.registerResource(
+      'KIP dashboard template',
+      new ResourceTemplate('kip://template/{id}', {
+        list: () => ({ resources: listTemplateResources() }),
+        complete: { id: (value) => completeTemplateId(value) },
+      }),
+      {
+        description: 'One KIP dashboard template by id, with the widgets it lays out.',
+        mimeType: 'application/json',
+      },
+      async (uri, variables) => {
+        const text = readTemplateResource(String(variables.id));
+        return { contents: [{ uri: uri.href, mimeType: 'application/json', text }] };
+      },
+    );
   }
 
   private registerPrompts(): void {

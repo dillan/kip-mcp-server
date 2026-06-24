@@ -86,6 +86,45 @@ describe('KipMCPServer over MCP (in-memory)', () => {
   });
 });
 
+describe('resource templates and completion', () => {
+  it('exposes the widget and template resource templates', async () => {
+    const client = await connectClient();
+    const { resourceTemplates } = await client.listResourceTemplates();
+    expect(resourceTemplates.map((t) => t.uriTemplate)).toEqual(
+      expect.arrayContaining(['kip://widget/{selector}', 'kip://template/{id}']),
+    );
+    await client.close();
+  });
+
+  it('reads an individual widget via its template URI', async () => {
+    const client = await connectClient();
+    const read = await client.readResource({ uri: 'kip://widget/widget-numeric' });
+    const contents = read.contents as Array<{ uri: string; text: string }>;
+    expect(contents[0].uri).toBe('kip://widget/widget-numeric');
+    expect(JSON.parse(contents[0].text).selector).toBe('widget-numeric');
+    await client.close();
+  });
+
+  it('reads an individual dashboard template via its template URI', async () => {
+    const client = await connectClient();
+    const read = await client.readResource({ uri: 'kip://template/sailing' });
+    const contents = read.contents as Array<{ text: string }>;
+    expect(JSON.parse(contents[0].text).id).toBe('sailing');
+    await client.close();
+  });
+
+  it('completes a widget selector template variable', async () => {
+    const client = await connectClient();
+    const res = await client.complete({
+      ref: { type: 'ref/resource', uri: 'kip://widget/{selector}' },
+      argument: { name: 'selector', value: 'widget-g' },
+    });
+    expect(res.completion.values.length).toBeGreaterThan(0);
+    expect(res.completion.values.every((v) => v.startsWith('widget-g'))).toBe(true);
+    await client.close();
+  });
+});
+
 describe('world-class MCP surface (structured output + annotations)', () => {
   it('exposes output schemas and read-only annotations on tools', async () => {
     const client = await connectClient();

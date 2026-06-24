@@ -36,6 +36,7 @@
     "test:e2e": "node scripts/e2e.mjs",
     "schema:refresh": "node scripts/refresh-schema.mjs",
     "registry:sync": "node scripts/sync-server-json-version.mjs",
+    "signalk:request-token": "node scripts/request-token.mjs",
     "docs:tools": "node scripts/gen-tool-reference.mjs",
     "docs:check": "node scripts/gen-tool-reference.mjs --check",
     "ci": "npm run format:check && npm run typecheck && npm run lint && npm run build && npm run docs:check && npm run test:coverage && npm run smoke && npm run smoke:http",

@@ -136,6 +136,9 @@ The server gives the assistant a set of tools, grouped by job:
   icons and units KIP understands.
 - **Design dashboards** — suggest a set of dashboards, build one for a chosen job, and draw
   a preview.
+- **Review the UX** — critique a dashboard for marine usability (hierarchy, grouping,
+  consistency, labels) with severity-tagged findings; the `review_dashboard` prompt drives it,
+  backed by a deterministic `check_dashboard_ux` lint.
 - **Check and save** — check a dashboard is well-formed, export it to a file, or write it to
   the boat (asking first).
 

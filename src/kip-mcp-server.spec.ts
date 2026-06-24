@@ -585,3 +585,69 @@ describe('live validation and diagnostics (in-memory)', () => {
     await connected.close();
   });
 });
+
+describe('kip-ux review skill', () => {
+  it('exposes the UX review resources', async () => {
+    const client = await connectClient();
+    const { resources } = await client.listResources();
+    expect(resources.map((r) => r.uri)).toEqual(
+      expect.arrayContaining(['kip://ux-review-guide', 'kip://ux-laws', 'kip://ux-conventions']),
+    );
+    const read = await client.readResource({ uri: 'kip://ux-conventions' });
+    expect((read.contents[0] as { text: string }).text).toContain('Marine abbreviations');
+    await client.close();
+  });
+
+  it('check_dashboard_ux flags objective issues over MCP', async () => {
+    const client = await connectClient();
+    const dashboard = {
+      configuration: [
+        {
+          x: 0,
+          y: 0,
+          w: 2,
+          h: 2,
+          input: {
+            widgetProperties: {
+              type: 'widget-numeric',
+              config: {
+                displayName: 'environment.depth.belowTransducer',
+                numDecimal: 1,
+                paths: {
+                  a: { path: 'self.environment.depth.belowTransducer', convertUnitTo: 'm' },
+                },
+              },
+            },
+          },
+        },
+      ],
+    };
+    const res = await client.callTool({ name: 'check_dashboard_ux', arguments: { dashboard } });
+    const sc = res.structuredContent as { ok: boolean; rawPathLabels: unknown[] };
+    expect(sc.ok).toBe(false);
+    expect(sc.rawPathLabels).toHaveLength(1);
+    await client.close();
+  });
+
+  it('review_dashboard adapts to the action and completes it', async () => {
+    const client = await connectClient();
+    const review = await client.getPrompt({
+      name: 'review_dashboard',
+      arguments: { action: 'review' },
+    });
+    expect((review.messages[0].content as { text: string }).text).toContain('check_dashboard_ux');
+
+    const principles = await client.getPrompt({
+      name: 'review_dashboard',
+      arguments: { action: 'principles' },
+    });
+    expect((principles.messages[0].content as { text: string }).text).toContain('kip://ux-laws');
+
+    const completion = await client.complete({
+      ref: { type: 'ref/prompt', name: 'review_dashboard' },
+      argument: { name: 'action', value: 'rev' },
+    });
+    expect(completion.completion.values).toContain('review');
+    await client.close();
+  });
+});

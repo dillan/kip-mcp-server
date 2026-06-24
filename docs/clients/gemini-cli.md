@@ -1,7 +1,12 @@
 # Gemini CLI
 
-Edit `~/.gemini/settings.json` and add a `kip` server. `npx` downloads and runs it on
-demand, so there's nothing to install first:
+Edit Gemini CLI's `settings.json` and add a `kip` server. `npx` downloads and runs it on
+demand, so there's nothing to install first. The file lives at:
+
+- **macOS / Linux:** `~/.gemini/settings.json`
+- **Windows:** `%USERPROFILE%\.gemini\settings.json` (that's `C:\Users\<you>\.gemini\settings.json`)
+
+(A project-level `.gemini/settings.json` in your working directory overrides it.)
 
 ```json
 {

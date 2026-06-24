@@ -23,11 +23,16 @@ export interface LoadOptions {
   timeoutMs?: number;
 }
 
-/** Reads the bundled fallback schema shipped with this package. */
+let cachedBundled: KipDashboardSchema | undefined;
+
+/** Reads the bundled fallback schema shipped with this package (parsed once). */
 export function loadBundledSchema(): KipDashboardSchema {
-  return JSON.parse(
-    readFileSync(resourcePath('bundled-schema.json'), 'utf8'),
-  ) as KipDashboardSchema;
+  if (!cachedBundled) {
+    cachedBundled = JSON.parse(
+      readFileSync(resourcePath('bundled-schema.json'), 'utf8'),
+    ) as KipDashboardSchema;
+  }
+  return cachedBundled;
 }
 
 class AuthError extends Error {

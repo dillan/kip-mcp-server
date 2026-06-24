@@ -61,7 +61,10 @@ export interface ToolResult {
 export function toToolResult(result: unknown): ToolResult {
   const value = (result ?? {}) as Record<string, unknown>;
   return {
-    content: [{ type: 'text', text: JSON.stringify(value, null, 2) }],
+    // Compact JSON (no indent): the structuredContent below is the machine-readable
+    // copy, so the text block only needs to be valid JSON, not pretty-printed —
+    // this trims ~30-50% off large results (e.g. analyze_signalk_data paths).
+    content: [{ type: 'text', text: JSON.stringify(value) }],
     structuredContent: value,
   };
 }

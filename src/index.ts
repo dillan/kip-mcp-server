@@ -11,7 +11,9 @@ import { KipMCPServer } from './kip-mcp-server.js';
 import { loadKipSchema } from './schema/kip-schema.js';
 import { TokenProvider } from './signalk/auth.js';
 
-dotenv.config();
+// quiet: dotenv otherwise prints an "injected env" tip to stdout, which corrupts
+// the stdio JSON-RPC stream and breaks MCP clients.
+dotenv.config({ quiet: true });
 
 process.on('unhandledRejection', (reason) => {
   console.error('[kip-mcp-server] Unhandled rejection:', reason);

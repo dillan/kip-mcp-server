@@ -1,13 +1,32 @@
 // Built-artifact smoke test: spawn the compiled stdio server and exercise it over
 // MCP, exactly as a real client (Claude Desktop, Codex, ...) would.
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+
+// stdout carries ONLY JSON-RPC for a stdio server. Anything else (a banner, a
+// log line, dotenv's "injected env" tip) corrupts the stream and breaks clients.
+// Start the server, send nothing, and assert it stays silent on stdout.
+async function assertSilentStdout() {
+  const child = spawn('node', ['dist/index.js'], { stdio: ['pipe', 'pipe', 'pipe'] });
+  let out = '';
+  child.stdout.on('data', (chunk) => {
+    out += chunk.toString();
+  });
+  await new Promise((resolve) => setTimeout(resolve, 800));
+  child.kill();
+  if (out.trim() !== '') {
+    throw new Error(
+      `server wrote non-protocol output to stdout at startup: ${JSON.stringify(out.slice(0, 200))}`,
+    );
+  }
+}
 
 const transport = new StdioClientTransport({ command: 'node', args: ['dist/index.js'] });
 const client = new Client({ name: 'smoke', version: '0.0.0' });
 
 try {
+  await assertSilentStdout();
   await client.connect(transport);
   const { tools } = await client.listTools();
   const names = tools.map((t) => t.name);

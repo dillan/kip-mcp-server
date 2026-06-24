@@ -17,6 +17,14 @@ export interface PathInfo {
   sampleValue: unknown;
   /** Number of sources reporting this path (>=1). */
   sourceCount: number;
+  /**
+   * Source ids reporting this path (the `values` keys, or the active source).
+   * Always set by {@link flattenVesselData}; optional so hand-built literals
+   * (e.g. test fixtures) may omit it.
+   */
+  sources?: string[];
+  /** The active source (`$source`) the server serves for this path, or null. */
+  defaultSource?: string | null;
 }
 
 /** High-level "what does this boat have" flags used to pick widgets. */
@@ -60,6 +68,9 @@ function toPathInfo(path: string, node: Record<string, unknown>): PathInfo {
   const value = 'value' in node ? node.value : null;
   const values = node.values as Record<string, unknown> | undefined;
   const zones = meta.zones;
+  const defaultSource = typeof node['$source'] === 'string' ? (node['$source'] as string) : null;
+  // Prefer the explicit per-source `values` map; fall back to the active source.
+  const sources = values ? Object.keys(values) : defaultSource !== null ? [defaultSource] : [];
   return {
     path,
     skUnit: typeof meta.units === 'string' ? meta.units : null,
@@ -68,7 +79,9 @@ function toPathInfo(path: string, node: Record<string, unknown>): PathInfo {
     hasZones: Array.isArray(zones) && zones.length > 0,
     pathType: valueType(value),
     sampleValue: value ?? null,
-    sourceCount: values ? Object.keys(values).length : 1,
+    sourceCount: sources.length || 1,
+    sources,
+    defaultSource,
   };
 }
 

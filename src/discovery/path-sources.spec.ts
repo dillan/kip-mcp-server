@@ -14,8 +14,7 @@ const self = JSON.parse(
   readFileSync(new URL('./fixtures/sailboat-self.json', import.meta.url), 'utf8'),
 ) as Record<string, unknown>;
 
-const find = (p: string): PathInfo | undefined =>
-  flattenVesselData(self).find((x) => x.path === p);
+const find = (p: string): PathInfo | undefined => flattenVesselData(self).find((x) => x.path === p);
 
 function fakeFetch(routes: Record<string, { status?: number; body: unknown }>): typeof fetch {
   return (async (url: unknown) => {
@@ -68,18 +67,19 @@ describe('get_path_sources tool', () => {
       }>;
     };
 
+    // Rows follow the inventory's stable sorted order, like get_path_meta.
     expect(result.sources).toEqual([
-      {
-        path: 'navigation.speedOverGround',
-        defaultSource: 'gps.0',
-        sources: ['gps.0', 'gps.1'],
-        sourceCount: 2,
-      },
       {
         path: 'environment.depth.belowTransducer',
         defaultSource: 'dst.0',
         sources: ['dst.0'],
         sourceCount: 1,
+      },
+      {
+        path: 'navigation.speedOverGround',
+        defaultSource: 'gps.0',
+        sources: ['gps.0', 'gps.1'],
+        sourceCount: 2,
       },
     ]);
   });

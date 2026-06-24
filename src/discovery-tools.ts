@@ -52,6 +52,17 @@ export const DISCOVERY_TOOL_SPECS: ToolSpec[] = [
     annotations: READ_ONLY_REMOTE,
   },
   {
+    name: 'get_path_sources',
+    title: 'Get path sources',
+    description:
+      'List the data sources reporting each Signal K path, and which source the server currently serves as the active one.',
+    inputSchema: {
+      paths: z.array(z.string()).describe('Paths to list the sources for.'),
+    },
+    outputSchema: { sources: z.array(kipObject) },
+    annotations: READ_ONLY_REMOTE,
+  },
+  {
     name: 'get_server_info',
     title: 'Get Signal K server info',
     description: 'Get the Signal K server version and id.',
@@ -105,6 +116,19 @@ export async function callDiscoveryTool(
       const wanted = new Set(Array.isArray(args.paths) ? args.paths.map(String) : []);
       const meta = flattenVesselData(await sk.getVesselSelf()).filter((p) => wanted.has(p.path));
       return { meta };
+    }
+
+    case 'get_path_sources': {
+      const wanted = new Set(Array.isArray(args.paths) ? args.paths.map(String) : []);
+      const sources = flattenVesselData(await sk.getVesselSelf())
+        .filter((p) => wanted.has(p.path))
+        .map((p) => ({
+          path: p.path,
+          defaultSource: p.defaultSource,
+          sources: p.sources,
+          sourceCount: p.sourceCount,
+        }));
+      return { sources };
     }
 
     case 'get_server_info':
